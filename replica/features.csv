@@ -1,0 +1,25 @@
+feature,area,priority,original,clone,notes
+App shell with top bar and separate library panel,navigation,must,yes,no,
+Home feed with five browsing sections,feed,must,yes,no,
+Card artwork with title and subtitle,feed,must,yes,no,
+Play button revealed on card hover or focus,feed,must,yes,no,
+Horizontal section scrolling with chevron buttons,feed,must,yes,no,
+Sticky preview banner with sign-up CTA,monetisation,must,yes,no,
+Now-playing bar replaces the banner on play,player,must,yes,no,
+Play and pause a selection,player,must,yes,no,
+Seek within a track,player,must,yes,no,
+Previous and next track,player,must,yes,no,
+Shuffle and repeat toggles,player,must,yes,no,
+Volume control,player,must,yes,no,
+Search filters the catalogue,search,must,yes,no,
+Empty search state,search,must,yes,no,
+Library empty state with promo cards,library,must,yes,no,
+Responsive down to 360px,layout,must,yes,no,
+Real audio streaming,playback,must,yes,not shipped,needs licensed audio and a backend
+Accounts, library saving and sync,account,must,yes,skip,no auth in a static clone
+Real catalogue and artist artwork,catalogue,must,yes,no,seed data is original and artwork is generated
+Playlists and saved tracks,library,should,yes,partial,"add button only, no persistence"
+Podcasts and audiobooks,content,should,yes,skip,separate content model
+Queue and device picker,player,should,yes,partial,buttons are present without a backend
+Language picker,settings,could,yes,no,single locale
+Paid ads and Premium upsell flow,monetisation,could,yes,skip,needs billing
