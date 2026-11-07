@@ -1,0 +1,13 @@
+{
+  "name": "marlowe",
+  "private": true,
+  "type": "module",
+  "description": "Marlowe — a clean-room chat interface study with accounts, served from a Worker.",
+  "scripts": {
+    "dev": "wrangler dev --port 8788",
+    "check": "node --check worker.js && node --check public/app.js && node --check public/account.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.44.0"
+  }
+}

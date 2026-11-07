@@ -1,0 +1,7 @@
+{
+  "siteId": "6d4ce6ae-f530-4271-9a9e-a655b8e3609b",
+  "name": "Marlowe",
+  "preview": "https://site-1bacdba7e3d345ef9e4bfe6f6a52b45d.freebuff.page",
+  "production": "https://site-3b0435b88c334bc2b54fa405ca4a593d.freebuff.page",
+  "bindings": { "DB": "d1" }
+}

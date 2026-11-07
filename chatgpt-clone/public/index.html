@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marlowe — Chat</title>
+<meta name="description" content="Marlowe is a chat interface study: a clean-room rebuild of an AI assistant's public web surface.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230d0d0d'/%3E%3Cpath d='M12 5c.9 4 3 6.1 7 7-4 .9-6.1 3-7 7-.9-4-3-6.1-7-7 4-.9 6.1-3 7-7Z' fill='%23fff'/%3E%3C/svg%3E">
+<script>
+  /* Resolve the theme before first paint so there is no flash and the token
+     blocks do not have to be duplicated for the system preference. */
+  (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("marlowe.prefs") || "{}");
+      const theme = saved.theme || "system";
+      const dark = theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      if (saved.motion === "reduce") document.documentElement.dataset.motion = "reduce";
+      if (saved.suggestions === false) document.documentElement.dataset.chips = "off";
+    } catch (error) {
+      document.documentElement.dataset.theme = "light";
+    }
+  })();
+</script>
+<link rel="stylesheet" href="styles.css?v=8">
+</head>
+<body>
+<a class="skip" href="#prompt">Skip to the message box</a>
+
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.5c.85 3.9 2.75 5.8 6.65 6.65.5.11.5.61 0 .72-3.9.85-5.8 2.75-6.65 6.65-.11.5-.61.5-.72 0-.85-3.9-2.75-5.8-6.65-6.65-.5-.11-.5-.61 0-.72 3.9-.85 5.8-2.75 6.65-6.65.11-.5.61-.5.72 0Z" fill="currentColor"/></symbol>
+  <symbol id="i-compose" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h3.6l9.7-9.7a2.1 2.1 0 0 0 0-3l-.6-.6a2.1 2.1 0 0 0-3 0L4 16.4V20Z"/><path d="M13.4 6.6 17.4 10.6"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M4 17.5 9 13l3.5 3 3-2.5L20 18"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4"/><path d="M7 7h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V7Z"/><path d="M12 15v6"/></symbol>
+  <symbol id="i-plan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v4.7l3.2 2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2-2.4 3.6"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-research" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 9 15"/><path d="M9 15 6 12l7-7 5 5-7 7-2-2Z"/><path d="M14 5.5 18.5 10"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 0Z"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9.5 4v16"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 10v4M9 7v10M13 5v14M17 9v6M21 11v2"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5A2.5 2.5 0 0 0 12.5 3H6a3 3 0 0 0-3 3v6.5A2.5 2.5 0 0 0 5.5 15"/></symbol>
+  <symbol id="i-reload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <div class="sidebar__head">
+      <button class="brand" type="button" id="brand" aria-label="Marlowe, open menu">
+        <svg class="brand__mark" aria-hidden="true"><use href="#i-spark"/></svg>
+        <span class="brand__name">Marlowe</span>
+        <svg class="brand__chevron" aria-hidden="true"><use href="#i-chevron"/></svg>
+      </button>
+      <button class="iconbtn sidebar__toggle" type="button" id="collapse" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+        <svg aria-hidden="true"><use href="#i-panel"/></svg>
+      </button>
+    </div>
+
+    <nav class="nav" aria-label="Main">
+      <a class="nav__row" href="#" data-action="new">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-compose"/></svg>
+        <span class="nav__label">New chat</span>
+      </a>
+      <a class="nav__row" href="#images">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-image"/></svg>
+        <span class="nav__label">Gallery</span>
+      </a>
+      <a class="nav__row" href="#addons">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-plug"/></svg>
+        <span class="nav__label">Add-ons</span>
+      </a>
+      <a class="nav__row" href="#pricing">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-plan"/></svg>
+        <span class="nav__label">Plans and pricing</span>
+        <svg class="nav__external" aria-hidden="true"><use href="#i-external"/></svg>
+      </a>
+      <a class="nav__row" href="#help">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-help"/></svg>
+        <span class="nav__label">Help</span>
+        <svg class="nav__external" aria-hidden="true"><use href="#i-external"/></svg>
+      </a>
+      <a class="nav__row" href="#research">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-research"/></svg>
+        <span class="nav__label">Research</span>
+      </a>
+      <a class="nav__row" href="#settings" data-open="settings">
+        <svg class="nav__icon" aria-hidden="true"><use href="#i-settings"/></svg>
+        <span class="nav__label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="promo" id="promoCard">
+        <h2 class="promo__title">Answers that keep your context</h2>
+        <p class="promo__body">Sign in to save your chats, generate images and attach files.</p>
+        <button class="btn btn--quiet promo__cta" type="button" data-open="auth" data-mode="signup">Create an account</button>
+      </div>
+      <div class="acct" id="sidebarAccount" hidden>
+        <div class="acct__row">
+          <span class="avatar avatar--sm" aria-hidden="true"><span id="sideInitials">M</span></span>
+          <span class="acct__id">
+            <span class="acct__name" id="sideName"></span>
+            <span class="acct__email" id="sideEmail"></span>
+          </span>
+        </div>
+        <div class="acct__actions">
+          <button class="btn btn--quiet btn--sm" type="button" data-open="settings">Settings</button>
+          <button class="btn btn--outline btn--sm" type="button" id="sideSignOut">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="iconbtn topbar__menu" type="button" id="openSidebar" aria-label="Open sidebar" aria-controls="sidebar">
+        <svg aria-hidden="true"><use href="#i-menu"/></svg>
+      </button>
+      <div class="topbar__actions">
+        <div class="auth" id="authActions">
+          <button class="btn btn--primary" type="button" data-open="auth" data-mode="signin">Sign in</button>
+          <button class="btn btn--outline" type="button" data-open="auth" data-mode="signup">Join free</button>
+        </div>
+        <div class="account" id="accountActions" hidden>
+          <button class="avatar" type="button" id="avatarBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu" aria-label="Account menu"><span id="avatarInitials">M</span></button>
+          <div class="menu" id="accountMenu" role="menu" aria-label="Account" hidden>
+            <p class="menu__id">
+              <span class="menu__name" id="menuName"></span>
+              <span class="menu__email" id="menuEmail"></span>
+            </p>
+            <button class="menu__item" type="button" role="menuitem" data-open="settings">Settings</button>
+            <button class="menu__item" type="button" role="menuitem" id="menuSignOut">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="viewport" id="viewport">
+      <section class="hero" id="hero" aria-labelledby="heroTitle">
+        <h1 class="hero__title" id="heroTitle">What's on your mind?</h1>
+      </section>
+
+      <div class="composer-slot" id="composerSlot">
+        <form class="composer" id="composer" autocomplete="off">
+        <button class="iconbtn composer__attach" type="button" data-toast="Attachments are not available in this demo." aria-label="Attach files and tools">
+          <svg aria-hidden="true"><use href="#i-plus"/></svg>
+        </button>
+        <label class="sr-only" for="prompt">Message Marlowe</label>
+        <textarea class="composer__input" id="prompt" name="prompt" rows="1" placeholder="Ask Marlowe anything" autocapitalize="sentences" spellcheck="true"></textarea>
+        <button class="iconbtn composer__mic" type="button" data-toast="Dictation is not available in this demo." aria-label="Dictate a message">
+          <svg aria-hidden="true"><use href="#i-mic"/></svg>
+        </button>
+        <button class="composer__voice" type="button" data-toast="Voice mode is not available in this demo." aria-label="Start voice mode">
+          <svg aria-hidden="true"><use href="#i-wave"/></svg>
+        </button>
+        <button class="composer__send" type="submit" id="send" aria-label="Send message" disabled>
+          <svg aria-hidden="true"><use href="#i-arrow-up"/></svg>
+        </button>
+        </form>
+
+        <div class="chips" id="chips">
+          <button class="chip" type="button" data-prompt="What can you help me with?">What can you help me with?</button>
+        </div>
+      </div>
+
+      <section class="thread" id="thread" role="log" aria-live="polite" aria-label="Conversation" hidden></section>
+    </div>
+
+    <div class="dock">
+      <p class="legal">Marlowe is a demo. Replies are scripted rather than model-generated, and it can be wrong. <a href="#about">How this works</a></p>
+    </div>
+
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </main>
+</div>
+
+<dialog class="sheet" id="authDialog" aria-labelledby="authTitle">
+  <form class="sheet__form" id="authForm" novalidate>
+    <div class="sheet__top">
+      <svg class="sheet__mark" aria-hidden="true"><use href="#i-spark"/></svg>
+      <button class="iconbtn sheet__close" type="button" data-close aria-label="Close">
+        <svg aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <h2 class="sheet__title" id="authTitle">Welcome back</h2>
+    <p class="sheet__sub" id="authSub">Sign in to keep your chats and settings.</p>
+
+    <div class="field" id="nameField" hidden>
+      <label class="field__label" for="authName">Display name</label>
+      <input class="field__input" id="authName" name="name" type="text" autocomplete="name" maxlength="40" placeholder="Optional">
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="authEmail">Email</label>
+      <input class="field__input" id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" spellcheck="false" required aria-describedby="emailError">
+      <p class="field__error" id="emailError" hidden></p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="authPassword">Password</label>
+      <input class="field__input" id="authPassword" name="password" type="password" autocomplete="current-password" required aria-describedby="passwordHint passwordError">
+      <p class="field__hint" id="passwordHint" hidden>Use at least 8 characters.</p>
+      <p class="field__error" id="passwordError" hidden></p>
+    </div>
+
+    <p class="sheet__error" id="authError" role="alert" hidden></p>
+
+    <button class="btn btn--primary sheet__submit" type="submit" id="authSubmit">Sign in</button>
+
+    <p class="sheet__switch">
+      <span id="authSwitchText">New here?</span>
+      <button class="linkbtn" type="button" id="authToggle">Create an account</button>
+    </p>
+  </form>
+</dialog>
+
+<dialog class="sheet sheet--wide" id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="settings">
+    <header class="settings__head">
+      <h2 class="settings__title" id="settingsTitle">Settings</h2>
+      <button class="iconbtn" type="button" data-close aria-label="Close settings">
+        <svg aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </header>
+
+    <div class="settings__body">
+      <nav class="settings__nav" aria-label="Settings sections">
+        <button class="settings__tab" type="button" data-tab="general" aria-current="true">General</button>
+        <button class="settings__tab" type="button" data-tab="account">Account</button>
+        <button class="settings__tab" type="button" data-tab="data">Data controls</button>
+      </nav>
+
+      <div class="settings__panes">
+        <section class="settings__pane" data-pane="general">
+          <h3 class="settings__h">Appearance</h3>
+          <div class="row">
+            <div class="row__text">
+              <span class="row__label">Theme</span>
+              <span class="row__note">Follows your system unless you pick one.</span>
+            </div>
+            <div class="segmented" role="radiogroup" aria-label="Theme">
+              <label class="segment"><input type="radio" name="theme" value="system"><span>System</span></label>
+              <label class="segment"><input type="radio" name="theme" value="light"><span>Light</span></label>
+              <label class="segment"><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+            </div>
+          </div>
+
+          <h3 class="settings__h">Behaviour</h3>
+          <div class="row">
+            <div class="row__text">
+              <span class="row__label">Suggested prompts</span>
+              <span class="row__note">Show the starter chip under the message box.</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="setSuggestions"><span class="switch__track" aria-hidden="true"></span><span class="sr-only">Suggested prompts</span></label>
+          </div>
+          <div class="row">
+            <div class="row__text">
+              <span class="row__label">Reduce motion</span>
+              <span class="row__note">Turns off the streaming and slide transitions.</span>
+            </div>
+            <label class="switch"><input type="checkbox" id="setMotion"><span class="switch__track" aria-hidden="true"></span><span class="sr-only">Reduce motion</span></label>
+          </div>
+
+          <p class="settings__status" id="prefsStatus" role="status"></p>
+        </section>
+
+        <section class="settings__pane" data-pane="account" hidden>
+          <div id="acctOut">
+            <h3 class="settings__h">Account</h3>
+            <p class="settings__lead">You are not signed in. Settings on this device still work; signing in stores them with your account.</p>
+            <button class="btn btn--primary" type="button" data-open="auth" data-mode="signin">Sign in</button>
+          </div>
+
+          <div id="acctIn" hidden>
+            <h3 class="settings__h">Profile</h3>
+            <div class="row row--stack">
+              <div class="row__text">
+                <label class="row__label" for="setName">Display name</label>
+                <span class="row__note">Shown on your messages and account menu.</span>
+              </div>
+              <div class="row__controls">
+                <input class="field__input field__input--inline" id="setName" type="text" maxlength="40" autocomplete="name">
+                <button class="btn btn--quiet btn--sm" type="button" id="saveName">Save</button>
+              </div>
+              <p class="field__error" id="nameError" hidden></p>
+            </div>
+
+            <h3 class="settings__h">Sign-in</h3>
+            <div class="row">
+              <div class="row__text"><span class="row__label">Email</span><span class="row__note" id="acctEmail"></span></div>
+            </div>
+            <div class="row">
+              <div class="row__text"><span class="row__label">Member since</span><span class="row__note" id="acctSince"></span></div>
+            </div>
+            <button class="btn btn--outline" type="button" id="settingsSignOut">Sign out</button>
+          </div>
+        </section>
+
+        <section class="settings__pane" data-pane="data" hidden>
+          <h3 class="settings__h">Your data</h3>
+          <p class="settings__lead">This demo stores an email, a password hash, a display name and your three settings. Conversations stay in the page and are never uploaded.</p>
+          <div class="row">
+            <div class="row__text">
+              <span class="row__label">Export</span>
+              <span class="row__note">Download what is stored as JSON.</span>
+            </div>
+            <button class="btn btn--quiet btn--sm" type="button" id="exportData">Export</button>
+          </div>
+          <div class="row">
+            <div class="row__text">
+              <span class="row__label">Delete account</span>
+              <span class="row__note">Removes the account, its settings and its sessions.</span>
+            </div>
+            <button class="btn btn--outline btn--sm" type="button" id="deleteAccount">Delete</button>
+          </div>
+          <div class="confirm" id="deleteConfirm" hidden>
+            <p class="confirm__text">This cannot be undone. Delete the account?</p>
+            <div class="confirm__actions">
+              <button class="btn btn--danger btn--sm" type="button" id="deleteConfirmYes">Delete account</button>
+              <button class="btn btn--quiet btn--sm" type="button" id="deleteConfirmNo">Cancel</button>
+            </div>
+          </div>
+          <p class="settings__status" id="dataStatus" role="status"></p>
+        </section>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js?v=7"></script>
+<script src="account.js?v=2"></script>
+</body>
+</html>

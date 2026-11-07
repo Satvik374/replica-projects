@@ -1,0 +1,35 @@
+feature,area,priority,original,clone,notes
+Two-column shell with fixed 260px sidebar,layout,P1,yes,yes,matches measured width and gutters
+Sidebar nav rows with icons and external markers,layout,P1,yes,yes,labels rewritten
+Sidebar footer sign-in card,layout,P1,yes,yes,
+Top-right account buttons,layout,P1,yes,yes,Sign in / Join free
+Hero heading centred above composer,layout,P1,yes,yes,24px weight 400
+Composer pill with attach and input,layout,P1,yes,yes,auto-growing textarea
+Dictation and voice affordances,layout,P2,yes,partial,icons present; no capture
+Suggestion chip under composer,layout,P1,yes,yes,
+Legal line pinned to bottom,layout,P1,yes,yes,rewritten copy
+User bubble with blue text,conversation,P1,yes,yes,matches radius and colours
+Assistant plain-text reply,conversation,P1,yes,yes,
+Assistant action row,conversation,P2,yes,yes,copy and regenerate are wired
+Streaming reply with stop button,conversation,P1,yes,yes,scripted text, not a model
+Typing indicator before first token,conversation,P1,yes,yes,three-dot pulse
+Message actions regenerate,conversation,P2,yes,yes,
+Markdown in replies,conversation,P2,yes,partial,bold italic inline code fenced code bullets numbered lists; no tables or links
+Collapsible sidebar with toggle,sidebar,P2,yes,yes,persists in local storage
+Mobile off-canvas drawer with scrim,mobile,P1,yes,yes,closes on Escape and scrim
+Enter sends Shift+Enter newline,keyboard,P1,yes,yes,
+Focus management and visible focus,keyboard,P1,yes,yes,
+Empty thread state,states,P1,yes,yes,hero returns on New chat
+Error state with retry,states,P1,yes,yes,triggered by the word error
+Reduced-motion support,states,P2,no,yes,original does not advertise it
+Dark theme,docs,P2,yes,yes,"follows prefers-color-scheme; tokens only, not visually verified"
+Real model responses,backend,P0,yes,not shipped,no API key; replies are scripted
+Accounts chat history and sync,backend,P0,yes,partial,email and password accounts and settings sync; conversations are not saved
+Image generation and file upload,backend,P0,yes,not shipped,out of scope
+Voice and dictation capture,backend,P0,yes,not shipped,out of scope
+Persistence across refresh,backend,P1,no,no,matching logged-out behaviour
+Email and password accounts,account,P1,yes,yes,own Worker API; PBKDF2 hash and cookie session
+Sign-in state in the header,account,P1,yes,yes,avatar menu plus sidebar account card
+Settings dialog with theme and behaviour,account,P1,yes,yes,General Account Data controls
+Export and delete account,account,P2,yes,yes,deletes sessions and settings too
+Per-device preferences before sign-in,account,P2,no,yes,localStorage then synced to the account
