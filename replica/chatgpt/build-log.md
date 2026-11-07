@@ -105,7 +105,29 @@ changes. Both are now referenced with a version query (`?v=5`).
   code, bullets and numbered lists are covered.
 - Dark theme is token-complete but unverified in a browser.
 
-## 6. Accounts, settings and deployment (second pass)
+## 6. Accounts, settings and deployment
+
+## 7. Optional OpenRouter free-model integration (user-provided key)
+
+The chat now optionally connects to [OpenRouter](https://openrouter.ai) using a key the user enters in settings. The key is stored in `localStorage` (`marloweOrKey`) and never sent to the Worker server -- the browser calls `https://openrouter.ai/api/v1/responses` directly with `model: openrouter/free`. On each reply the app:
+
+1. **Tries OpenRouter first** (if a key is set) and falls back to the scripted engine on 429, auth errors, or network problems.
+2. **Shows a rate-limit banner** if the free-tier daily cap (50 requests/day without credits, 1000 with $\ge$10 credits) is reached.
+3. **Keeps the scripted replies** as the default: no API key = scripted behaviour, exactly as before.
+
+The settings dialog now has an "OpenRouter key" field (hidden until the user is signed in). Signed-out preferences (`localStorage`) still work alongside the key.
+
+**Rate limits** that affect the free models router:
+- 20 requests per minute
+- 50 requests per day without purchased credits
+- 1000 requests per day after purchasing at least $10 in credits all-time
+
+**Models**: the `openrouter/free` router randomly selects from currently available free models (e.g. `meta-llama/llama-3.2-3b-instruct:free`, `google/gemma-3-27b-it:free`, `deepseek/deepseek-chat-v3-0324:free`, etc.). The specific model can also be set by using a `:free` variant suffix on a known model ID.
+
+**Fallback**: if OpenRouter returns a 429, the demo quietly switches to the scripted engine and shows a transient "OpenRouter rate limited -- using scripted replies" toast. If the key is deleted, the same thing happens on the next reply.
+
+**Security**: the key lives only in the browser's `localStorage`. It is not uploaded, not stored on the Worker, and not transmitted off the client machine except the single outbound HTTPS request to OpenRouter for each reply.
+ (second pass)
 
 The chat surface shipped first; this pass added the parts that need a server, and
 put the whole thing behind a real URL.

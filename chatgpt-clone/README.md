@@ -161,3 +161,21 @@ Deliberate deviations:
 In `../replica/chatgpt/clone-screens/`: `01`–`06` the original surface, `07`–`08`
 auth and settings at 390, `09`–`10` sign-in and settings at 912, `11` the deployed
 dark theme signed in.
+
+## OpenRouter free-model integration (optional)
+
+A user can supply an OpenRouter API key in the settings dialog. The key is stored
+in `localStorage` (`marloweOrKey`) and the browser calls
+`https://openrouter.ai/api/v1/responses` directly with `model: openrouter/free`.
+Each reply first tries OpenRouter; on 429, auth failure, or network error the
+demo falls back to the scripted replies exactly as if no key were present. The
+key is never sent to the Worker or persisted server-side.
+
+**Rate limits**: 20 requests/minute, 50/day without credits, 1000/day after
+purchasing $\ge\$10$ in credits all-time. Free models may have lower
+availability or higher latency during peak usage.
+
+**Security**: the key stays only in the browser. It is not uploaded, not stored
+on the server, and not transmitted off the client machine except the single
+outbound HTTPS request to OpenRouter per reply.
+

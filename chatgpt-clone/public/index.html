@@ -271,6 +271,15 @@
           </div>
 
           <p class="settings__status" id="prefsStatus" role="status"></p>
+
+    <!-- OpenRouter key row (hidden until user enters one) -->
+    <div class="row" id="orKeyRow" style="display:none;">
+      <div class="row__text">
+        <span class="row__label">OpenRouter key</span>
+        <span class="row__note">Enter an OpenRouter key to use free models.</span>
+      </div>
+      <input class="field__input field__input--inline" id="orKey" type="password" maxlength="128" autocomplete="new-password">
+    </div>
         </section>
 
         <section class="settings__pane" data-pane="account" hidden>

@@ -362,7 +362,46 @@
 
   const typingDots = () => el("div", { class: "typing" }, [el("span"), el("span"), el("span")]);
 
-  function errorCard(prompt, container) {
+  // OpenRouter
+  let orKey = localStorage.getItem("marloweOrKey");
+
+  async function orChat(prompt) {
+  if (!orKey) return null;
+  try {
+    const resp = await fetch("https://openrouter.ai/api/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + orKey,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.origin,
+        "X-OpenRouter-Title": "Marlowe"
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        input: prompt,
+        stream: false
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      // 429 = rate limited; fall through to scripted
+      if (resp.status === 429) return {fallback: true};
+      throw new Error((data && data.error) || "OpenRouter error");
+    }
+    // data.output is array; find the assistant message text
+    const message = [...data.output].reverse().find((item) => item.type === "message");
+    const text = message && message.content
+      ? message.content.find((part) => part.type === "output_text")?.text
+      : null;
+    if (!text) return {fallback: true};
+    return {reply: text, model: data.model};
+  } catch (e) {
+    // network / auth error = fall through
+    return {fallback: true};
+  }
+}
+
+function errorCard(prompt, container) {
     const retry = el("button", {
       class: "btn btn--outline btn--sm",
       type: "button",
