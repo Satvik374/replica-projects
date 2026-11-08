@@ -617,6 +617,8 @@ function planOutcome(prompt) {
   };
 }
 
+const aiReady = () => !!account.state.ai?.configured;
+
 async function sendPrompt(prompt) {
   if (state.busy) {
     toast("The agent is still working on the last prompt.", "");
@@ -634,29 +636,91 @@ async function sendPrompt(prompt) {
   }
 
   if (!state.project) {
-    let outcome;
+    /* The local blueprints still name the project and set its mode; with a
+       provider configured the model writes the files instead. */
+    let draft;
     try {
-      outcome = build(prompt, { mode: state.mode });
+      draft = build(prompt, { mode: state.mode });
     } catch (error) {
       toast("That prompt could not be turned into a project.", "err");
       return;
     }
     try {
-      const data = await account.request("/projects", { method: "POST", body: { name: outcome.name, mode: outcome.mode } });
+      const data = await account.request("/projects", { method: "POST", body: { name: draft.name, mode: draft.mode } });
       await openWorkspace(data.project.id);
-      await runTurn(prompt, outcome);
+      if (aiReady() && !state.planMode) await runAiTurn(prompt);
+      else await runTurn(prompt, draft);
     } catch (error) {
       toast(error.message, "err");
     }
     return;
   }
 
-  const outcome = state.planMode ? planOutcome(prompt) : followUp(prompt, state.files);
+  if (state.planMode) {
+    await runTurn(prompt, planOutcome(prompt));
+    return;
+  }
+  if (aiReady()) {
+    await runAiTurn(prompt);
+    return;
+  }
+
+  const outcome = followUp(prompt, state.files);
   if (outcome.unmatched && !state.files.length) {
     toast("Build something first, then ask for changes.", "");
     return;
   }
   await runTurn(prompt, outcome);
+}
+
+/* The model runs on the server, so the chat shows a waiting bubble while the
+   request is open, then hands the finished files to the same turn renderer the
+   local agent uses — one code path for versions, chips, previews and usage. */
+async function runAiTurn(prompt) {
+  const model = account.state.ai.model || "the model";
+  state.busy = true;
+  renderUsage();
+  const thinking = showThinking(`Asking ${model}…`);
+  let outcome = null;
+  try {
+    const data = await account.request("/ai/turns", {
+      method: "POST",
+      body: { prompt, mode: state.mode, files: state.files }
+    });
+    outcome = data.outcome;
+  } catch (error) {
+    thinking?.remove();
+    state.busy = false;
+    renderUsage();
+    toast(error.message, "err");
+    /* A missing key or a provider hiccup should not strand the prompt. */
+    if ((error.status === 412 || error.status === 502) && state.files.length) {
+      const fallback = followUp(prompt, state.files);
+      if (fallback && !fallback.unmatched) {
+        toast("Answered with the local agent instead.", "");
+        await runTurn(prompt, fallback);
+      }
+    }
+    return;
+  }
+  thinking?.remove();
+  state.busy = false;
+  await runTurn(prompt, outcome);
+}
+
+function showThinking(label) {
+  const host = $("#chat-scroll") || chatScroll();
+  if (!host) return null;
+  const node = document.createElement("article");
+  node.className = "msg";
+  node.innerHTML = `<div class="agent-avatar" aria-hidden="true">A</div>
+    <div class="msg-body">
+      <div class="msg-head"><span>Anvel</span><span class="msg-time">working…</span></div>
+      <p class="msg-text typing">${esc(label)}</p>
+    </div>`;
+  host.appendChild(node);
+  scrollChat();
+  return node;
 }
 
 async function runTurn(prompt, outcome) {
@@ -1027,6 +1091,7 @@ function switchTab(tab) {
 /* ---------------------------------------------------------------- settings */
 
 function openSettings() {
+  paintAiSettings();
   $$("[data-theme-set]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.getAttribute("data-theme-set") === state.settings.theme));
   });
@@ -1036,6 +1101,93 @@ function openSettings() {
   if (defaultMode) defaultMode.value = state.settings.defaultMode;
   renderUsage();
   account.openDialog("dlg-settings");
+}
+
+/* ------------------------------------------------------- settings: provider */
+
+function renderEngineTag() {
+  const ai = account.state.ai;
+  const label = ai?.configured ? `AI · ${ai.model}` : "Local agent";
+  $$(".agent-tag").forEach((node) => {
+    node.innerHTML = `<svg class="ico tiny"><use href="#i-spark"></use></svg>${esc(label)}`;
+    node.title = ai?.configured
+      ? `Prompts go to ${ai.model} at ${ai.baseUrl} with your key`
+      : "Built-in deterministic agent: ten blueprints, no model, no key";
+  });
+}
+
+function paintAiSettings() {
+  const ai = account.state.ai;
+  const baseUrl = $("#ai-base-url");
+  if (!baseUrl) return;
+  baseUrl.value = ai.baseUrl || "";
+  $("#ai-model").value = ai.model || "";
+  const key = $("#ai-api-key");
+  key.value = "";
+  key.placeholder = ai.hasKey ? `Saved (${ai.keyHint}) — leave blank to keep it` : "sk-…";
+  $("#ai-clear").hidden = !ai.hasKey;
+  const status = $("#ai-status");
+  status.dataset.kind = ai.configured ? "ok" : "";
+  status.textContent = ai.configured
+    ? `Prompts go to ${ai.model} at ${ai.baseUrl} with your key. Turn this off any time to go back to the local agent.`
+    : "Not configured. Prompts are answered by the built-in local agent.";
+}
+
+function wireAiSettings() {
+  const save = $("#ai-save");
+  if (!save) return;
+
+  save.addEventListener("click", async () => {
+    const status = $("#ai-status");
+    save.disabled = true;
+    save.textContent = "Saving…";
+    try {
+      const ai = await account.saveAi({
+        baseUrl: $("#ai-base-url").value.trim(),
+        apiKey: $("#ai-api-key").value.trim(),
+        model: $("#ai-model").value.trim()
+      });
+      paintAiSettings();
+      renderEngineTag();
+      toast(`Using ${ai.model}`, "ok");
+    } catch (error) {
+      status.dataset.kind = "err";
+      status.textContent = error.message;
+      if (error.field) $(`#ai-${error.field.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`)?.focus();
+    } finally {
+      save.disabled = false;
+      save.textContent = "Save provider";
+    }
+  });
+
+  $("#ai-test").addEventListener("click", async () => {
+    const button = $("#ai-test");
+    const status = $("#ai-status");
+    button.disabled = true;
+    button.textContent = "Testing…";
+    try {
+      const data = await account.testAi();
+      status.dataset.kind = "ok";
+      status.textContent = `${data.model} answered in ${data.latency} ms with ${data.tokens} tokens.`;
+    } catch (error) {
+      status.dataset.kind = "err";
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Test connection";
+    }
+  });
+
+  $("#ai-clear").addEventListener("click", async () => {
+    try {
+      await account.removeAi();
+      paintAiSettings();
+      renderEngineTag();
+      toast("Provider removed — back to the local agent", "ok");
+    } catch (error) {
+      toast(error.message, "err");
+    }
+  });
 }
 
 /* ----------------------------------------------------------------- palette */
@@ -1139,6 +1291,7 @@ function wireStatic() {
           state.user = null;
           state.project = null;
           showShell(false);
+          renderEngineTag();
           toast("Signed out", "ok");
           navigate("#/");
         } catch (error) {
@@ -1378,6 +1531,8 @@ async function boot() {
       state.usage = account.state.usage;
       state.settings = account.state.settings;
       state.mode = state.settings.defaultMode || "website";
+      await account.loadAi();
+      renderEngineTag();
       $$("[data-mode-chip]").forEach((chip) =>
         chip.setAttribute("aria-pressed", String(chip.getAttribute("data-mode-chip") === state.mode))
       );
@@ -1403,9 +1558,12 @@ async function boot() {
   });
 
   wireStatic();
+  wireAiSettings();
 
   const user = await account.loadSession();
   if (user) {
+    await account.loadAi();
+    renderEngineTag();
     state.user = user;
     state.usage = account.state.usage;
     state.settings = account.state.settings;

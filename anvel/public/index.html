@@ -449,6 +449,25 @@
               <p class="settings-note">The free plan allows 300K tokens a day and 1M a month, resetting at midnight UTC and on the 1st. Editing files in Code view never counts.</p>
             </section>
             <section class="settings-block">
+              <h3>AI provider</h3>
+              <p class="setting-copy">Any OpenAI-compatible endpoint. The key is stored with your account on the server, never sent back to this browser, and only used for prompts you send from this account.</p>
+              <label class="ai-field"><span>Base URL</span>
+                <input class="input" id="ai-base-url" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="ai-field"><span>API key</span>
+                <input class="input" id="ai-api-key" type="password" placeholder="sk-…" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="ai-field"><span>Model id</span>
+                <input class="input" id="ai-model" placeholder="gpt-4o-mini" autocomplete="off" spellcheck="false" />
+              </label>
+              <p class="settings-note" id="ai-status">Not configured. Prompts are answered by the built-in local agent.</p>
+              <div class="ai-actions">
+                <button class="btn ghost" type="button" id="ai-test">Test connection</button>
+                <button class="btn ghost" type="button" id="ai-clear" hidden>Remove</button>
+                <button class="btn primary" type="button" id="ai-save">Save provider</button>
+              </div>
+            </section>
+            <section class="settings-block">
               <h3>Account</h3>
               <p class="setting-copy" id="settings-account">Not signed in.</p>
             </section>
@@ -473,7 +492,7 @@
         <p class="dialog-sub">Anvel is a clean-room rebuild of a prompt-to-app editor: same job, own name, own palette, own code.</p>
         <ul class="about-list">
           <li><strong>Real files.</strong> Every build is index.html, styles.css and app.js, editable in Code view.</li>
-          <li><strong>A deterministic agent.</strong> Ten blueprints and a fixed set of follow-up moves — no model, no key, no cost. It refuses what it cannot do.</li>
+          <li><strong>Your choice of agent.</strong> A deterministic local agent with ten blueprints works with no key at all; add an OpenAI-compatible endpoint in Settings and a model writes the files instead.</li>
           <li><strong>Sandboxed previews.</strong> Generated code runs in an opaque origin, so it cannot read your session.</li>
           <li><strong>Nothing borrowed.</strong> No original markup, copy, logos, fonts or endpoints. Layout conventions only.</li>
         </ul>

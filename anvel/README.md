@@ -39,23 +39,41 @@ public/blueprints-*.js ten starting points: landing, dashboard, waitlist, timer,
 
 ## The agent
 
-`public/agent.js` is a **local, deterministic agent** — no model and no API key. It reads
-a prompt for intent (kind, subject, palette, sections), picks a blueprint, and writes
-`index.html`, `styles.css` and `app.js` from it. Follow-up prompts go through a fixed
-transform vocabulary: palette, accent colour, title, add/remove a section, type scale,
-contrast and motion. Anything outside that vocabulary is **refused in one line** instead
-of quietly doing nothing.
+There are two, and Settings says which one is answering.
 
-That honesty is the design rule: the UI labels it "Local agent", and a prompt it cannot
-serve says so. Swapping in a real model means replacing `build` and `followUp` in
-`public/agent.js` and having the worker store whatever files the model returns — the rest
-of the app (preview, editor, versions, publish) does not care where files come from.
+**The local agent** (`public/agent.js`) is deterministic — no model, no key, no cost. It
+reads a prompt for intent (kind, subject, palette, sections), picks a blueprint, and
+writes `index.html`, `styles.css` and `app.js` from it. Follow-up prompts go through a
+fixed transform vocabulary: palette, accent colour, title, add/remove a section, type
+scale, contrast and motion. Anything outside that vocabulary is **refused in one line**
+instead of quietly doing nothing.
+
+**Your own model** turns on when you add three things in Settings → AI provider: a base
+URL, an API key and a model id. Any OpenAI-compatible `/chat/completions` endpoint works
+(OpenAI, OpenRouter, Groq, Together, a proxy, `llama.cpp`…). While it is configured the
+composer tag reads `AI · <model>` and prompts go through the Worker to that provider:
+
+- The key is written to `ai_settings` for that account and **never sent back** — reads
+  return a masked hint (`…3456`) only, and errors are scrubbed of it.
+- `POST /api/ai/turns` builds the prompt (system rules + current files + request), calls
+  the provider once, and returns files, steps, a summary and token usage.
+- Those files then travel through the ordinary `POST /api/projects/:id/turns`, so path and
+  size validation, versions, preview and usage accounting all happen in one place.
+- The response is parsed tolerantly (fences and stray prose are fine) and then held to the
+  same file rules a hand edit must pass. A model that returns junk gets a clear 502 and the
+  chat falls back to the local agent for that prompt rather than writing a broken build.
+- `POST /api/ai/test` makes a one-word call — the fastest way to find a wrong key or a
+  misspelled model id.
+
+Removing the provider is one button, and every prompt goes back to the local agent.
 
 ## How the pieces work
 
 - **Turns.** One `POST /api/projects/:id/turns` writes the user message, the assistant
   message, the changed files, a version snapshot and the token usage in one batch, then
   returns the new state. The client streams the step list locally while it waits.
+- **Provider settings.** `GET/PUT/DELETE /api/ai/settings` plus `POST /api/ai/test` and
+  `POST /api/ai/turns`; all scoped to the session user, all returning the masked shape.
 - **Preview.** Files are inlined into one document and rendered in an iframe with
   `sandbox="allow-scripts allow-forms allow-modals allow-popups"` — no
   `allow-same-origin`, so generated code cannot touch the app's DOM, storage or session.
@@ -84,5 +102,8 @@ navigations with `index.html` before the Worker runs, which breaks `/api/:id/pre
 - No package installs and no in-browser dev server: generated apps are dependency-free.
 - No hosted database, no generated-app sign-in, no Figma import, no GitHub sync, no
   Stripe/Supabase connectors, no Expo builds, no teams or multiplayer.
-- The agent covers ten kinds of app plus a fixed set of follow-up edits; it is not a
-  general model and does not pretend to be.
+- The local agent covers ten kinds of app plus a fixed set of follow-up edits; it is not a
+  general model and does not pretend to be. Quality with a real model is the provider's.
+- Provider keys are stored unencrypted in D1, protected by the account session and by
+  never leaving the Worker. A production deployment would wrap them in a KMS or Cloudflare
+  secret store instead of a column.

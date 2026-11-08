@@ -4,7 +4,9 @@
 export const state = {
   user: null,
   usage: null,
-  settings: { theme: "system", showTokens: true, defaultMode: "website" }
+  settings: { theme: "system", showTokens: true, defaultMode: "website" },
+  /* Never the key itself: the server keeps it and reports only a masked hint. */
+  ai: { configured: false, baseUrl: "", model: "", hasKey: false, keyHint: "", updatedAt: 0 }
 };
 
 let onAuthChange = () => {};
@@ -102,7 +104,36 @@ export async function signOut() {
   state.user = null;
   state.usage = null;
   state.settings = { theme: "system", showTokens: true, defaultMode: "website" };
+  state.ai = { configured: false, baseUrl: "", model: "", hasKey: false, keyHint: "", updatedAt: 0 };
   applyTheme();
+}
+
+/* ------------------------------------------------------------ ai provider */
+
+export async function loadAi() {
+  try {
+    const data = await request("/ai/settings");
+    state.ai = data.ai;
+  } catch {
+    state.ai = { configured: false, baseUrl: "", model: "", hasKey: false, keyHint: "", updatedAt: 0 };
+  }
+  return state.ai;
+}
+
+export async function saveAi({ baseUrl, apiKey, model }) {
+  const data = await request("/ai/settings", { method: "PUT", body: { baseUrl, apiKey, model } });
+  state.ai = data.ai;
+  return state.ai;
+}
+
+export async function testAi() {
+  return request("/ai/test", { method: "POST" });
+}
+
+export async function removeAi() {
+  const data = await request("/ai/settings", { method: "DELETE" });
+  state.ai = data.ai;
+  return state.ai;
 }
 
 export async function saveSettings(partial) {

@@ -1,7 +1,9 @@
 /* Anvel — the Worker: static assets, a JSON API over D1, and published sites.
 
-   Everything user-owned is scoped by the session's user id. Nothing here calls
-   a third party. Generated apps are stored as text and served from /s/:slug. */
+   Everything user-owned is scoped by the session's user id. The only outbound
+   call is the model request an account opts into with its own provider details;
+   those details stay on the server and are never sent back to the browser.
+   Generated apps are stored as text and served from /s/:slug. */
 
 const COOKIE = "anvel_session";
 const SESSION_TTL = 60 * 60 * 24 * 30;
@@ -10,6 +12,8 @@ const DAY_TOKENS = 300000;
 const MONTH_TOKENS = 1000000;
 const MAX_FILES = 60;
 const MAX_FILE_BYTES = 200 * 1024;
+const AI_TIMEOUT = 120000;
+const AI_PROMPT_BYTES = 160 * 1024;
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 
@@ -145,6 +149,11 @@ function ensureSchema(env) {
            user_id TEXT PRIMARY KEY, theme TEXT NOT NULL DEFAULT 'dark', show_tokens INTEGER NOT NULL DEFAULT 1,
            default_mode TEXT NOT NULL DEFAULT 'website', updated_at INTEGER NOT NULL)`
       ),
+      env.DB.prepare(
+        `CREATE TABLE IF NOT EXISTS ai_settings (
+           user_id TEXT PRIMARY KEY, base_url TEXT NOT NULL, model TEXT NOT NULL,
+           api_key TEXT NOT NULL, updated_at INTEGER NOT NULL)`
+      ),
       env.DB.prepare("CREATE INDEX IF NOT EXISTS projects_owner ON projects(user_id, updated_at DESC)"),
       env.DB.prepare("CREATE INDEX IF NOT EXISTS messages_project ON messages(project_id, created_at)"),
       env.DB.prepare("CREATE INDEX IF NOT EXISTS versions_project ON versions(project_id, created_at DESC)"),
@@ -190,6 +199,115 @@ async function settingsFor(env, userId) {
   const row = await env.DB.prepare("SELECT theme, show_tokens, default_mode FROM settings WHERE user_id = ?").bind(userId).first();
   if (!row) return { theme: "dark", showTokens: true, defaultMode: "website" };
   return { theme: row.theme, showTokens: !!row.show_tokens, defaultMode: row.default_mode };
+}
+
+/* ---------------------------------------------------------- ai provider
+
+   Accounts may point Anvel at their own OpenAI-compatible endpoint. The key is
+   written once and never leaves the server: reads return a masked hint only and
+   the browser never sees it. Every call is per-account, so one account can never
+   spend another's provider credits. */
+
+const AI_SYSTEM = `You are the build agent inside Anvel, an app that turns a request into a working website or app.
+Answer with ONE JSON object and nothing else, in exactly this shape:
+{"reply":"one short paragraph for the chat","summary":"under 12 words for the project card","files":[{"path":"index.html","content":"..."}],"steps":[{"text":"what you did","path":"file you touched"}]}
+
+Rules:
+- Vanilla HTML, CSS and JavaScript only. No frameworks, no build step, no npm, no imports.
+- Every asset lives in the file set: no CDN links, remote fonts, images or network requests. Use inline SVG or CSS for art.
+- If you split files, link them relatively (styles.css, app.js) from index.html.
+- Work from 360px up, keyboard accessible, real labels, visible focus.
+- Working code only: no TODOs, no "coming soon", no lorem ipsum where real copy is possible.
+- No secrets, analytics, cookies, tracking or third-party embeds.
+- For a follow-up, return the complete updated file set, not a diff, and keep everything that was not asked to change.
+- "reply" explains what changed in the user's words. Never call yourself an AI model.
+- At most 4 files, each under 60 KB.`;
+
+function aiBaseUrl(value) {
+  let url;
+  try {
+    url = new URL(text(value, 300));
+  } catch {
+    return "";
+  }
+  if (url.username || url.password) return "";
+  const localHost = ["localhost", "127.0.0.1", "[::1]", "::1"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && localHost)) return "";
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+}
+
+const aiEndpoint = (base) => (/\/chat\/completions$/.test(base) ? base : `${base}/chat/completions`);
+
+async function aiConfigFor(env, userId) {
+  return (await env.DB.prepare("SELECT * FROM ai_settings WHERE user_id = ?").bind(userId).first()) || null;
+}
+
+const publicAi = (row) => ({
+  configured: !!row?.api_key,
+  baseUrl: row?.base_url || "",
+  model: row?.model || "",
+  hasKey: !!row?.api_key,
+  keyHint: row?.api_key ? `…${row.api_key.slice(-4)}` : "",
+  updatedAt: row?.updated_at || 0
+});
+
+/* One chat completion against whatever the account configured. Errors are
+   surfaced with the provider's own message, trimmed, and never the key. */
+async function aiComplete(config, messages, maxTokens = 6000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT);
+  try {
+    const response = await fetch(aiEndpoint(config.base_url), {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${config.api_key}` },
+      body: JSON.stringify({ model: config.model, messages, temperature: 0.3, max_tokens: maxTokens }),
+      signal: controller.signal
+    });
+    const raw = await response.text();
+    if (!response.ok) {
+      const parsed = parseJson(raw, null);
+      const message = text(parsed?.error?.message || parsed?.message || raw, 240);
+      throw new Error(message ? `${message} (${response.status})` : `the provider answered ${response.status}`);
+    }
+    const payload = parseJson(raw, null);
+    const content = payload?.choices?.[0]?.message?.content;
+    const reply = Array.isArray(content) ? content.map((part) => part?.text || "").join("") : content;
+    if (typeof reply !== "string" || !reply.trim()) throw new Error("the provider returned an empty message");
+    return { text: reply, tokens: Math.max(0, Number(payload?.usage?.total_tokens) || 0), model: text(payload?.model, 80) || config.model };
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error(`the provider did not answer within ${Math.round(AI_TIMEOUT / 1000)}s`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* Models drift: fenced JSON, a stray sentence, JSON with helpful prose around it.
+   Take the outermost object, then hold the result to the same file rules a manual
+   edit has to pass. Anything that fails becomes a clear refusal, not a broken build. */
+function parseAiTurn(raw) {
+  const body = String(raw).trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+  const start = body.indexOf("{");
+  const end = body.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  const data = parseJson(body.slice(start, end + 1), null);
+  if (!data || typeof data !== "object" || !Array.isArray(data.files)) return null;
+  const files = validFiles(data.files.map((file) => ({ path: file?.path, content: file?.content })));
+  if (!files || !files.some((file) => /\.html?$/i.test(file.path))) return null;
+  const steps = (Array.isArray(data.steps) ? data.steps : [])
+    .slice(0, 24)
+    .map((step) =>
+      typeof step === "string"
+        ? { kind: "write", text: text(step, 160) }
+        : { kind: text(step?.kind, 16) || "write", text: text(step?.text, 160), path: safePath(step?.path), lines: Number(step?.lines) || 0 }
+    )
+    .filter((step) => step.text || step.path);
+  return {
+    reply: text(data.reply, 2000) || "Updated the project.",
+    summary: text(data.summary, 200),
+    files,
+    steps
+  };
 }
 
 async function sessionUser(env, request) {
@@ -377,6 +495,117 @@ async function handleApi(request, env, url) {
       .bind(userId, theme, showTokens ? 1 : 0, defaultMode, now())
       .run();
     return ok({ settings: await settingsFor(env, userId) });
+  }
+
+  /* ------------------------------------------------------------ ai provider */
+
+  if (path === "/ai/settings" && method === "GET") {
+    return json({ ai: publicAi(await aiConfigFor(env, userId)) });
+  }
+
+  if (path === "/ai/settings" && method === "PUT") {
+    const body = await request.json().catch(() => ({}));
+    const baseUrl = aiBaseUrl(body.baseUrl);
+    const model = text(body.model, 120);
+    const supplied = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+    if (!baseUrl) return fail(400, "That base URL is not usable. Use https, like https://api.example.com/v1.", "baseUrl");
+    if (!model) return fail(400, "Add the model id your provider expects.", "model");
+    const existing = await aiConfigFor(env, userId);
+    const apiKey = supplied || existing?.api_key || "";
+    if (!apiKey) return fail(400, "Add the API key for this provider.", "apiKey");
+    if (!/^[\x21-\x7e]{6,400}$/.test(apiKey)) return fail(400, "That API key does not look right — paste the value your provider gave you.", "apiKey");
+    await env.DB.prepare(
+      `INSERT INTO ai_settings (user_id, base_url, model, api_key, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET base_url = excluded.base_url, model = excluded.model,
+         api_key = excluded.api_key, updated_at = excluded.updated_at`
+    )
+      .bind(userId, baseUrl, model, apiKey, now())
+      .run();
+    return ok({ ai: publicAi(await aiConfigFor(env, userId)) });
+  }
+
+  if (path === "/ai/settings" && method === "DELETE") {
+    await env.DB.prepare("DELETE FROM ai_settings WHERE user_id = ?").bind(userId).run();
+    return ok({ ai: publicAi(null) });
+  }
+
+  /* A real, tiny completion: the quickest way to find out a key is wrong or a
+     model id is misspelled is to ask the provider, not to guess. */
+  if (path === "/ai/test" && method === "POST") {
+    const config = await aiConfigFor(env, userId);
+    if (!config?.api_key) return fail(400, "Save your provider details first.", "ai");
+    const started = now();
+    try {
+      const result = await aiComplete(
+        config,
+        [
+          { role: "system", content: "Reply with exactly one word: ready" },
+          { role: "user", content: "ping" }
+        ],
+        24
+      );
+      return ok({ model: result.model, tokens: result.tokens, latency: now() - started, reply: text(result.text, 40) });
+    } catch (error) {
+      return fail(502, `That provider call failed: ${error.message}`, "provider");
+    }
+  }
+
+  /* Generation only: the files still travel through the normal turn endpoint,
+     so size, path and allowance rules apply exactly once, in one place. */
+  if (path === "/ai/turns" && method === "POST") {
+    const body = await request.json().catch(() => ({}));
+    const prompt = text(body.prompt, 600);
+    if (!prompt) return fail(400, "A turn needs a prompt.");
+    if ((await usageFor(env, userId)).blocked) {
+      return fail(429, "You have used today's allowance. Prompts reset at midnight UTC; Code view edits stay free.", "usage");
+    }
+    const config = await aiConfigFor(env, userId);
+    if (!config?.api_key) return fail(412, "Add your provider details in Settings, or keep using the local agent.", "ai");
+
+    const current = validFiles(Array.isArray(body.files) ? body.files : []) || [];
+    const listing = current.length
+      ? current
+          .map((file) => `----- ${file.path} -----\n${file.content}`)
+          .join("\n\n")
+          .slice(0, AI_PROMPT_BYTES)
+      : "(no files yet — this is the first build)";
+    const mode = ["website", "app", "prototype", "slides"].includes(body.mode) ? body.mode : "website";
+
+    let result;
+    try {
+      result = await aiComplete(config, [
+        { role: "system", content: AI_SYSTEM },
+        { role: "user", content: `Mode: ${mode}\n\nCurrent files:\n${listing}\n\nRequest: ${prompt}` }
+      ]);
+    } catch (error) {
+      return fail(502, `The model call failed: ${error.message}. Check the provider details in Settings.`, "provider");
+    }
+
+    const turn = parseAiTurn(result.text);
+    if (!turn) return fail(502, "The model answered without usable files. Try again, or switch to the local agent in Settings.", "format");
+
+    const before = new Map(current.map((file) => [file.path, file.content]));
+    const changedPaths = turn.files.filter((file) => before.get(file.path) !== file.content).map((file) => file.path);
+    /* Models write confident line counts that are often wrong. Count the files
+       we actually received instead, so the chat cannot report "0 lines". */
+    const lineCount = new Map(turn.files.map((file) => [file.path, file.content.split("\n").length]));
+    const steps = (turn.steps.length
+      ? turn.steps
+      : turn.files.map((file) => ({ kind: "write", path: file.path }))
+    ).map((step) => (step.path ? { ...step, lines: lineCount.get(step.path) || step.lines || 0 } : step));
+
+    return json({
+      outcome: {
+        reply: turn.reply,
+        summary: turn.summary,
+        files: turn.files,
+        steps,
+        tokens: result.tokens,
+        changedPaths,
+        engine: "ai",
+        model: result.model
+      }
+    });
   }
 
   if (path === "/projects" && method === "GET") {

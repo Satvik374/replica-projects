@@ -41,6 +41,25 @@ checking rather than assuming. Dates are the working session's clock (2026-11-08
 | 8 | Parity tool crashed | unquoted commas in my feature matrix | quoted every field |
 | 9 | Toolbar collisions: project title over Preview/Code, Save over the tab strip, lone `/` address pill | flex children without shrink limits | measured the boxes, constrained each, re-measured |
 | 10 | A published site rendered unstyled | the page is served at `/s/:slug` with no trailing slash, so `styles.css` resolved to `/s/styles.css` and 404'd | published HTML inlines its CSS/JS, so a site is one request |
+| 11 | Chat said "Wrote index.html · 0 lines" after a model turn | the line count was taken from the model's own step metadata, which is often absent or wrong | the server counts the lines of the files it actually received |
+
+## Real model integration (after the rebuild)
+
+The first build shipped only the deterministic agent, with the honest label "Local agent".
+A provider is now configurable per account: base URL, API key and model id in Settings.
+Design decisions worth keeping:
+
+- The key lives in `ai_settings` and is never returned by any endpoint; reads expose a
+  four-character hint. Errors from the provider are trimmed and checked for the key.
+- Generation is one server call (`POST /api/ai/turns`); the resulting files still go
+  through the normal turn endpoint, so there is exactly one place that validates paths,
+  enforces size limits, writes versions and counts tokens.
+- A model answer that is not usable JSON with at least one HTML file is a 502, not a
+  half-written project — and the client silently falls back to the local agent so the
+  prompt is never stranded.
+- Verified against a local OpenAI-compatible stub (26 assertions: masking, save/keep key,
+  test call, generation, persistence, preview, provider error, removal, 412) plus the same
+  flow driven through the browser.
 
 Each of 1–8 was found by running the thing, not by reading it. 3 and 4 were only visible
 in a real browser; curl alone showed both as healthy.
