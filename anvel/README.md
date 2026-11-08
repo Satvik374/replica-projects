@@ -20,7 +20,7 @@ Open http://127.0.0.1:3000, press **Start building**, and make an account. Accou
 projects, files, versions and publishes live in a local D1 database under
 `anvel/.wrangler/state`; delete that folder to start clean.
 
-There is no build step. `public/` is served as-is and `worker.js` is the only server file.
+There is no build step. `public/` is served as-is. The backend is `worker.js` on Cloudflare, or `api/index.js` on Vercel (see below) — same logic, different database shim.
 
 ## What is here
 
@@ -90,12 +90,38 @@ Removing the provider is one button, and every prompt goes back to the local age
 
 ## Deploy
 
+### Cloudflare (original)
+
 `deploy.json` is the deployment manifest (Worker entry `worker.js`, static
 `assetsDirectory: ./public`, SPA fallback). Create a D1 database, bind it as `DB`, and
 deploy. `wrangler.jsonc` holds the same shape for local development plus
 `run_worker_first`, which is required: without it the asset layer answers iframe and link
 navigations with `index.html` before the Worker runs, which breaks `/api/:id/preview` and
 `/s/:slug` in a browser.
+
+### Vercel
+
+Set the project's **Root Directory** to `anvel`, then deploy. `vercel.json` serves
+`public/` statically and rewrites `/api/*` and `/s/*` to `api/index.js`, a serverless
+function that runs the same `worker.js` logic — which is why `/api/me` and
+`/api/auth/signup` answer instead of 404ing (a plain GitHub-to-Vercel deploy without
+this file only uploads the static shell and every API call 404s).
+
+Database, one of:
+
+- **Postgres (production).** Vercel dashboard → Storage → Create → Postgres, or connect
+  Neon/Supabase. Copy the connection string into **Settings → Environment Variables**
+  as `POSTGRES_URL` (see `.env.example`). Accounts, projects and publishes then persist
+  and are shared across instances.
+- **SQLite fallback (smoke test only).** With no connection string, `api/index.js` uses
+  a local SQLite file (`/tmp/anvel-vercel.db`). Sign-up works immediately, but the file
+  is ephemeral on Vercel — accounts disappear on cold starts and are not shared between
+  instances. Fine for trying the app; not for real use.
+
+Locally, `npm run dev:vercel` runs the Vercel dev server; `npm run dev` still runs the
+Worker. Sequence verified through the Vercel handler: health → sign-up → me →
+create/list project → turn → preview → publish → `/s/:slug` → sign-in (right and wrong
+password).
 
 ## Limits, stated plainly
 
