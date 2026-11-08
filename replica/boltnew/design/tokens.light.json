@@ -1,0 +1,30 @@
+{
+  "_about": "Anvel tokens, light theme overrides. Same roles, values swapped; both themes pass WCAG AA.",
+  "color": {
+    "bg": "#fbfaf7",
+    "surface": "#ffffff",
+    "surface-2": "#f4f1ea",
+    "border": "#e5e0d6",
+    "border-input": "#736d61",
+    "text": "#171512",
+    "text-muted": "#5d574c",
+    "accent": "#a35a00",
+    "on-accent": "#fff8ec",
+    "danger": "#a93326",
+    "success": "#1c6b45",
+    "warning": "#8a5a00"
+  },
+  "pairs": [
+    ["text", "bg"],
+    ["text", "surface"],
+    ["text", "surface-2"],
+    ["text-muted", "bg"],
+    ["text-muted", "surface"],
+    ["on-accent", "accent"],
+    ["accent", "bg"],
+    ["danger", "bg"],
+    ["success", "bg"],
+    ["warning", "bg"],
+    ["border-input", "bg", "ui"]
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "anvel",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-07",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Without this the asset layer answers iframe/link navigations with
+    // index.html before the Worker sees them, so /api/*/preview and /s/:slug
+    // would render the app shell instead of the thing that was asked for.
+    "run_worker_first": true
+  },
+  // Local development only. The Sites deployment injects the real DB binding;
+  // this block just gives `wrangler dev` a local database to talk to.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "anvel",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

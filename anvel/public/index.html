@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anvel — describe it, ship it</title>
+    <meta name="description" content="Anvel turns a sentence into a working web app: real files, a live preview, version history and a publish button." />
+    <meta name="theme-color" content="#0d0f12" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23f0a13c'/%3E%3Cpath d='M9 23l7-14 7 14' stroke='%231a1206' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body data-view="landing">
+    <!-- icon sprite: plain geometric shapes, drawn for this build -->
+    <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.6 2.6 5.4 5.9.8-4.3 4.1 1.1 5.9-5.3-3-5.3 3 1.1-5.9L3.5 9.8l5.9-.8z"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.4l3.6 2.1"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.4h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.6 2.3c-.8.5-1.2 1-1.2 1.9"/><path d="M12 16.6h.01"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m14.5 5-7 7 7 7"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8.5 8-4.5 4 4.5 4M15.5 8l4.5 4-4.5 4"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12 17.9 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></symbol>
+      <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+      <symbol id="i-device" viewBox="0 0 24 24"><rect x="2.5" y="5" width="14" height="10" rx="1.8"/><rect x="17" y="9" width="4.5" height="10" rx="1.4"/><path d="M6 19h6"/></symbol>
+      <symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"/></symbol>
+      <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m6 11 6-6 6 6"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12.5 5 5L20 6.5"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h7l5 5v13H6z"/><path d="M13 3v5h5"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.4-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.6 0z"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></symbol>
+      <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4.2L6 21z"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7L11.4 7"/><path d="M14 10a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 0 0 5.7 5.7l1.2-1.2"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+      <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M5 15c-1 2-1 4-1 4s2 0 4-1"/><path d="M9 15l-2-2c1-5 5-9 11-9 0 6-4 10-9 11z"/><circle cx="14.5" cy="8.5" r="1.4"/></symbol>
+    </svg>
+
+    <!-- ==================================================== guest landing -->
+    <div class="marketing" id="marketing">
+      <header class="m-nav">
+        <a class="brand" href="#/" aria-label="Anvel home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>anvel</span>
+        </a>
+        <nav class="m-links" aria-label="Product">
+          <a href="#how">How it works</a>
+          <a href="#inside">Inside the app</a>
+          <a href="#limits">Honest limits</a>
+        </nav>
+        <div class="m-nav-actions">
+          <button class="btn ghost" type="button" data-open="auth" data-mode="signin">Sign in</button>
+          <button class="btn primary" type="button" data-open="auth" data-mode="signup">Start building</button>
+        </div>
+      </header>
+
+      <section class="m-hero">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Prompt in, working app out</p>
+        <h1>Describe a thing.<br /><span class="accent">Get a working app.</span></h1>
+        <p class="lede">Anvel writes the files, lays out the screens and serves a preview you can actually click. Ask for a change and it edits the code. Publish it to a URL when you are happy.</p>
+        <div class="hero-composer" id="hero-composer"></div>
+        <div class="m-chips" role="group" aria-label="What to build">
+          <button class="chip" type="button" data-mode-chip="website" aria-pressed="true"><svg class="ico"><use href="#i-layers"></use></svg>Website</button>
+          <button class="chip" type="button" data-mode-chip="app" aria-pressed="false"><svg class="ico"><use href="#i-grid"></use></svg>App</button>
+          <button class="chip" type="button" data-mode-chip="prototype" aria-pressed="false"><svg class="ico"><use href="#i-spark"></use></svg>Prototype</button>
+          <button class="chip" type="button" data-mode-chip="slides" aria-pressed="false"><svg class="ico"><use href="#i-file"></use></svg>Slides</button>
+        </div>
+        <p class="start-from">or start from
+          <button class="pill-btn" type="button" data-needs="figma">Figma</button>
+          <button class="pill-btn" type="button" data-needs="github">GitHub</button>
+          <button class="pill-btn" type="button" data-template>Template</button>
+        </p>
+      </section>
+
+      <section class="m-section" id="how">
+        <div class="m-wrap">
+          <h2>Three moves, no toolchain</h2>
+          <div class="m-grid three">
+            <article class="card m-card"><span class="step">01</span><h3>Write it plainly</h3><p>“A kanban board for a design team, dark, with three columns.” That is enough. The agent reads the intent and picks a structure.</p></article>
+            <article class="card m-card"><span class="step">02</span><h3>Look at the real thing</h3><p>Every build lands as HTML, CSS and JS in front of you. Preview it, edit it in Code view, or ask for the next change.</p></article>
+            <article class="card m-card"><span class="step">03</span><h3>Put it somewhere</h3><p>Publish copies the files to an address you can send to someone. Update it when you mean to, not on every keystroke.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="m-section alt" id="inside">
+        <div class="m-wrap split">
+          <div>
+            <h2>The parts people actually use</h2>
+            <ul class="m-list">
+              <li><strong>Chat and preview, side by side.</strong> One column for the request, one for the result. Files touched are listed on the answer.</li>
+              <li><strong>A real editor.</strong> File tree, tabs, and Ctrl+S. Hand edits cost no usage and land in the next preview.</li>
+              <li><strong>Version history.</strong> Every turn is a snapshot. Rename it, bookmark it, restore it.</li>
+              <li><strong>Publish, unpublish, update.</strong> A live site is a copy, not a pointer — so nothing goes public by accident.</li>
+            </ul>
+          </div>
+          <div class="card m-shot" aria-hidden="true">
+            <div class="shot-top"><span></span><span></span><span></span></div>
+            <div class="shot-split">
+              <div class="shot-chat">
+                <div class="bubble me"></div>
+                <div class="bubble them"></div>
+                <div class="bubble them short"></div>
+                <div class="chip-row"><span></span><span></span><span></span></div>
+              </div>
+              <div class="shot-preview"><div class="ghost-nav"></div><div class="ghost-h"></div><div class="ghost-p"></div><div class="ghost-row"><span></span><span></span><span></span></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="m-section" id="limits">
+        <div class="m-wrap">
+          <h2>What this is, plainly</h2>
+          <p class="m-lede">Anvel is a study rebuild of the prompt-to-app loop, written from scratch. It is not an AI model and it will not pretend to be one: the agent works from a set of app blueprints and a fixed vocabulary of edits.</p>
+          <div class="m-grid three">
+            <article class="card m-card quiet"><h3>It really does build</h3><p>Ten blueprints, real state, real interactions, three files each. Previews are sandboxed iframes, so nothing generated can touch your account.</p></article>
+            <article class="card m-card quiet"><h3>It says no</h3><p>Ask for something outside its moves and it explains that, rather than returning a half-built guess. Code view is there for the rest.</p></article>
+            <article class="card m-card quiet"><h3>No secrets, no services</h3><p>Accounts, projects, versions and publishing all run in one Worker with SQLite. No third-party keys are needed to run it.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="m-cta">
+        <h2>Start with the thing you keep postponing</h2>
+        <button class="btn primary large" type="button" data-open="auth" data-mode="signup">Create an account</button>
+        <p class="fine">Free while you look around. Everything stays on this deployment.</p>
+      </section>
+
+      <footer class="m-foot">
+        <div class="m-wrap foot-row">
+          <p>© 2026 Anvel · a clean-room rebuild, not the original</p>
+          <nav aria-label="Footer"><a href="#how">How it works</a><a href="#inside">Inside</a><a href="#limits">Limits</a></nav>
+        </div>
+      </footer>
+    </div>
+
+    <!-- ==================================================== signed-in shell -->
+    <div class="shell" id="shell" hidden>
+      <aside class="sidebar" id="sidebar">
+        <div class="side-head">
+          <a class="brand" href="#/" aria-label="Anvel home"><span class="brand-mark" aria-hidden="true"></span><span>anvel</span></a>
+          <button class="icon-btn" type="button" id="collapse-side" aria-label="Collapse sidebar"><svg class="ico"><use href="#i-chevron-left"></use></svg></button>
+        </div>
+        <button class="search-trigger" type="button" id="open-search">
+          <svg class="ico"><use href="#i-search"></use></svg>
+          <span>Search projects</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="account-chip" type="button" id="account-chip" aria-haspopup="menu" aria-expanded="false">
+          <span class="avatar" id="account-avatar">A</span>
+          <span class="account-copy">
+            <span class="account-name" id="account-name">you</span>
+            <span class="plan" id="account-plan">Free</span>
+          </span>
+          <svg class="ico"><use href="#i-chevron-down"></use></svg>
+        </button>
+        <div class="menu account-menu" id="account-menu" role="menu" hidden>
+          <button role="menuitem" data-account="settings">Settings</button>
+          <button role="menuitem" data-account="usage">Plan &amp; usage</button>
+          <div class="menu-sep"></div>
+          <button role="menuitem" data-account="signout">Sign out</button>
+        </div>
+        <nav class="side-nav" aria-label="Workspace">
+          <a href="#/" data-nav="home"><svg class="ico"><use href="#i-home"></use></svg>Home</a>
+          <a href="#/projects" data-nav="projects"><svg class="ico"><use href="#i-grid"></use></svg>Projects</a>
+          <a href="#/starred" data-nav="starred"><svg class="ico"><use href="#i-star"></use></svg>Starred</a>
+          <a href="#/recent" data-nav="recent"><svg class="ico"><use href="#i-clock"></use></svg>Recently viewed</a>
+        </nav>
+        <div class="side-sep"></div>
+        <nav class="side-nav">
+          <button type="button" data-open="about"><svg class="ico"><use href="#i-help"></use></svg>What this is</button>
+        </nav>
+        <div class="side-usage">
+          <p class="usage-title">Daily usage</p>
+          <div class="meter"><span id="side-meter-day"></span></div>
+          <p class="usage-sub" id="side-usage-copy">0 of 300K tokens</p>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="view-bar">
+          <div class="view-bar-left">
+            <button class="icon-btn mobile-only" type="button" id="open-side" aria-label="Open menu"><svg class="ico"><use href="#i-grid"></use></svg></button>
+            <h1 class="view-title" id="view-title">Home</h1>
+          </div>
+          <div class="view-bar-right">
+            <button class="btn ghost" type="button" id="new-project"><svg class="ico"><use href="#i-plus"></use></svg>New project</button>
+          </div>
+        </header>
+
+        <div class="viewport" id="viewport">
+          <!-- ------------------------------------------------ home -->
+          <section class="view" id="view-home">
+            <div class="home-hero">
+              <h2>Describe a thing.<br /><span class="accent">Get a working app.</span></h2>
+              <p class="lede">Files, preview and a publish button. No setup.</p>
+              <div class="hero-composer" id="home-composer"></div>
+              <div class="m-chips" role="group" aria-label="What to build">
+                <button class="chip" type="button" data-mode-chip="website" aria-pressed="true"><svg class="ico"><use href="#i-layers"></use></svg>Website</button>
+                <button class="chip" type="button" data-mode-chip="app" aria-pressed="false"><svg class="ico"><use href="#i-grid"></use></svg>App</button>
+                <button class="chip" type="button" data-mode-chip="prototype" aria-pressed="false"><svg class="ico"><use href="#i-spark"></use></svg>Prototype</button>
+                <button class="chip" type="button" data-mode-chip="slides" aria-pressed="false"><svg class="ico"><use href="#i-file"></use></svg>Slides</button>
+              </div>
+            </div>
+            <div class="home-recent">
+              <div class="section-head">
+                <h3>Recently edited</h3>
+                <a href="#/projects" class="link">View all</a>
+              </div>
+              <div class="project-grid" id="recent-grid"></div>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ projects -->
+          <section class="view" id="view-projects" hidden>
+            <div class="dash-head">
+              <label class="search-field">
+                <svg class="ico"><use href="#i-search"></use></svg>
+                <input type="search" id="project-search" placeholder="Search a project" aria-label="Search a project" />
+              </label>
+              <div class="dash-filters">
+                <select class="select" id="project-sort" aria-label="Sort projects">
+                  <option value="edited">Last edited</option>
+                  <option value="created">Newest first</option>
+                  <option value="name">Name A–Z</option>
+                </select>
+              </div>
+            </div>
+            <div class="project-grid" id="project-grid"></div>
+            <div class="empty-state" id="projects-empty" hidden>
+              <div class="empty-glyph"><svg class="ico"><use href="#i-folder"></use></svg></div>
+              <h3 id="empty-title">No projects found</h3>
+              <p id="empty-copy">Create your first project to get started.</p>
+              <button class="btn primary" type="button" data-new-project>Create project</button>
+            </div>
+          </section>
+
+          <!-- ------------------------------------------------ workspace -->
+          <section class="view workspace" id="view-workspace" hidden>
+            <header class="ws-bar">
+              <div class="ws-left">
+                <button class="icon-btn" type="button" id="ws-back" aria-label="All projects"><svg class="ico"><use href="#i-chevron-left"></use></svg></button>
+                <div class="ws-title-wrap">
+                  <button class="ws-title" type="button" id="ws-title" aria-haspopup="menu" aria-expanded="false">
+                    <span class="ws-avatar" id="ws-avatar">A</span>
+                    <span class="ws-name" id="ws-name">Project</span>
+                    <svg class="ico tiny"><use href="#i-chevron-down"></use></svg>
+                  </button>
+                  <div class="menu ws-menu" id="ws-menu" role="menu" hidden>
+                    <button role="menuitem" data-project="rename">Rename</button>
+                    <button role="menuitem" data-project="versions">Version history</button>
+                    <button role="menuitem" data-project="duplicate">Duplicate</button>
+                    <button role="menuitem" data-project="download"><svg class="ico"><use href="#i-download"></use></svg>Download</button>
+                    <div class="menu-sep"></div>
+                    <button role="menuitem" data-project="delete" class="danger">Delete</button>
+                  </div>
+                </div>
+                <div class="seg" role="tablist" aria-label="View">
+                  <button role="tab" type="button" id="tab-preview" aria-selected="true"><svg class="ico"><use href="#i-eye"></use></svg>Preview</button>
+                  <button role="tab" type="button" id="tab-code" aria-selected="false"><svg class="ico"><use href="#i-code"></use></svg>Code</button>
+                </div>
+              </div>
+              <div class="ws-center">
+                <div class="address-bar" id="address-bar">
+                  <span class="slash">/</span>
+                  <span class="address-host" id="address-host">localhost</span>
+                </div>
+                <div class="preview-tools">
+                  <button class="icon-btn" type="button" id="btn-reload" aria-label="Reload preview" title="Reload"><svg class="ico"><use href="#i-refresh"></use></svg></button>
+                  <button class="icon-btn" type="button" id="btn-open" aria-label="Open preview in a new tab" title="Open in new tab"><svg class="ico"><use href="#i-external"></use></svg></button>
+                  <button class="icon-btn" type="button" id="btn-device" aria-label="Responsive preview" title="Responsive"><svg class="ico"><use href="#i-device"></use></svg></button>
+                  <button class="icon-btn" type="button" id="btn-full" aria-label="Full screen preview" title="Full screen"><svg class="ico"><use href="#i-fullscreen"></use></svg></button>
+                </div>
+              </div>
+              <div class="ws-right">
+                <button class="btn ghost small" type="button" id="ws-share"><svg class="ico"><use href="#i-link"></use></svg>Share</button>
+                <button class="btn primary small" type="button" id="ws-publish" aria-haspopup="dialog"><svg class="ico"><use href="#i-rocket"></use></svg><span id="publish-label">Publish</span></button>
+                <div class="publish-popover" id="publish-popover" role="dialog" aria-label="Publish project" hidden></div>
+              </div>
+            </header>
+
+            <div class="ws-body">
+              <section class="chat-pane" id="chat-pane" aria-label="Chat">
+                <div class="chat-scroll" id="chat-scroll"></div>
+                <div class="chat-composer" id="workspace-composer"></div>
+              </section>
+              <section class="stage-pane">
+                <div class="preview-host" id="preview-host">
+                  <div class="preview-frame-wrap" id="preview-frame-wrap">
+                    <iframe id="preview" title="Project preview" sandbox="allow-scripts allow-forms allow-modals allow-popups"></iframe>
+                  </div>
+                  <div class="preview-loading" id="preview-loading" hidden><span class="spinner" aria-hidden="true"></span>Loading the preview…</div>
+                </div>
+                <div class="code-host" id="code-host" hidden></div>
+              </section>
+              <aside class="versions-panel" id="versions-panel" hidden aria-label="Version history">
+                <header class="vp-head">
+                  <div><h2>Version history</h2><p>Review changes, revert to a version.</p></div>
+                  <button class="icon-btn" type="button" id="close-versions" aria-label="Close version history"><svg class="ico"><use href="#i-close"></use></svg></button>
+                </header>
+                <label class="search-field small">
+                  <svg class="ico"><use href="#i-search"></use></svg>
+                  <input type="search" id="versions-search" placeholder="Search for a version" aria-label="Search versions" />
+                </label>
+                <div class="vp-body" id="versions-body"></div>
+                <div class="vp-banner" id="versions-banner" hidden>
+                  <p>Viewing an older version.</p>
+                  <div class="vp-banner-actions">
+                    <button class="btn small primary" type="button" id="restore-version">Restore this version</button>
+                    <button class="btn small ghost" type="button" id="leave-version">Back to latest</button>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================== templates -->
+    <template id="tpl-composer">
+      <div class="composer">
+        <label class="sr-only" data-label>Describe what to build</label>
+        <textarea class="composer-input" rows="1" placeholder="A kanban board for a design team, dark, with three columns" maxlength="600"></textarea>
+        <div class="composer-row">
+          <div class="composer-left">
+            <button class="icon-btn" type="button" data-composer="attach" aria-label="Add context" title="Attach a file"><svg class="ico"><use href="#i-plus"></use></svg></button>
+            <span class="agent-tag"><svg class="ico tiny"><use href="#i-spark"></use></svg>Local agent</span>
+          </div>
+          <div class="composer-right">
+            <button class="pill-toggle" type="button" data-composer="plan" aria-pressed="false"><svg class="ico"><use href="#i-help"></use></svg>Plan</button>
+            <button class="btn primary send" type="button" data-composer="send" disabled>
+              <span data-send-label>Build now</span>
+              <svg class="ico"><use href="#i-send"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ==================================================== dialogs -->
+    <div class="dialog-backdrop" id="dialog-backdrop" hidden>
+      <div class="dialog" id="dlg-auth" role="dialog" aria-modal="true" aria-labelledby="auth-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="auth-title">Sign in</h2>
+        <p class="dialog-sub">Projects, versions and publications are tied to an account.</p>
+        <form class="auth-form" id="auth-form" novalidate>
+          <div class="field" data-field="username" hidden>
+            <label for="auth-username">Username</label>
+            <input class="input" id="auth-username" name="username" autocomplete="username" maxlength="24" />
+            <p class="field-hint">Lowercase letters, numbers and dashes.</p>
+          </div>
+          <div class="field" data-field="login">
+            <label for="auth-login" id="auth-login-label">Email or username</label>
+            <input class="input" id="auth-login" name="login" autocomplete="username" />
+          </div>
+          <div class="field" data-field="email" hidden>
+            <label for="auth-email">Email</label>
+            <input class="input" id="auth-email" name="email" type="email" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="auth-password">Password</label>
+            <input class="input" id="auth-password" name="password" type="password" autocomplete="current-password" />
+          </div>
+          <p class="form-error" id="auth-error" role="alert" hidden></p>
+          <button class="btn primary wide" type="submit" id="auth-submit">Sign in</button>
+        </form>
+        <p class="auth-switch">
+          <span id="auth-switch-copy">No account yet?</span>
+          <button class="link" type="button" id="auth-switch">Create one</button>
+        </p>
+        <p class="dialog-fine">Passwords are stored as PBKDF2-SHA256 hashes. There is no password reset in this build.</p>
+      </div>
+
+      <div class="dialog" id="dlg-rename" role="dialog" aria-modal="true" aria-labelledby="rename-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="rename-title">Rename project</h2>
+        <form id="rename-form" class="stack">
+          <div class="field"><label for="rename-input">Name</label><input class="input" id="rename-input" maxlength="60" /></div>
+          <div class="dialog-actions">
+            <button class="btn ghost" type="button" data-close>Cancel</button>
+            <button class="btn primary" type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="dialog" id="dlg-confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="confirm-title">Delete project?</h2>
+        <p class="dialog-sub" id="confirm-copy">This removes the files, chat history, versions and any published site. It cannot be undone.</p>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close>Keep it</button>
+          <button class="btn danger" type="button" id="confirm-delete">Delete permanently</button>
+        </div>
+      </div>
+
+      <div class="dialog wide" id="dlg-settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="settings-title">Settings</h2>
+        <div class="settings-grid">
+          <div class="settings-main">
+            <section class="settings-block">
+              <h3>General</h3>
+              <div class="setting-row">
+                <div><p class="setting-name">Appearance</p><p class="setting-copy">Applies to Anvel, not to the apps you build.</p></div>
+                <div class="seg-small" role="group" aria-label="Appearance">
+                  <button type="button" data-theme-set="system">System</button>
+                  <button type="button" data-theme-set="light">Light</button>
+                  <button type="button" data-theme-set="dark">Dark</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div><p class="setting-name">Show usage in the composer</p><p class="setting-copy">A small meter above the prompt box.</p></div>
+                <label class="switch"><input type="checkbox" id="setting-show-tokens" /><span></span></label>
+              </div>
+              <div class="setting-row">
+                <div><p class="setting-name">Default mode for new projects</p><p class="setting-copy">Pre-selects a chip on the home screen.</p></div>
+                <select class="select" id="setting-default-mode">
+                  <option value="website">Website</option><option value="app">App</option><option value="prototype">Prototype</option><option value="slides">Slides</option>
+                </select>
+              </div>
+            </section>
+            <section class="settings-block">
+              <h3>Plan &amp; usage</h3>
+              <div class="usage-block">
+                <p class="usage-label">Today</p>
+                <div class="meter"><span id="usage-day"></span></div>
+                <p class="usage-sub" id="usage-day-copy">0 of 300K tokens</p>
+              </div>
+              <div class="usage-block">
+                <p class="usage-label">This month</p>
+                <div class="meter"><span id="usage-month"></span></div>
+                <p class="usage-sub" id="usage-month-copy">0 of 1M tokens</p>
+              </div>
+              <p class="settings-note">The free plan allows 300K tokens a day and 1M a month, resetting at midnight UTC and on the 1st. Editing files in Code view never counts.</p>
+            </section>
+            <section class="settings-block">
+              <h3>Account</h3>
+              <p class="setting-copy" id="settings-account">Not signed in.</p>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog" id="dlg-share" role="dialog" aria-modal="true" aria-labelledby="share-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="share-title">Share</h2>
+        <p class="dialog-sub" id="share-copy">Publish the project to get a link others can open.</p>
+        <div class="share-link">
+          <input class="input" id="share-input" readonly value="" aria-label="Share link" />
+          <button class="btn ghost" type="button" id="share-copy-btn"><svg class="ico"><use href="#i-copy"></use></svg>Copy</button>
+        </div>
+        <p class="dialog-fine">Anyone with the link can view the published copy. Editing stays with you.</p>
+      </div>
+
+      <div class="dialog" id="dlg-about" role="dialog" aria-modal="true" aria-labelledby="about-title" hidden>
+        <button class="icon-btn dialog-close" type="button" data-close aria-label="Close"><svg class="ico"><use href="#i-close"></use></svg></button>
+        <h2 id="about-title">What this is</h2>
+        <p class="dialog-sub">Anvel is a clean-room rebuild of a prompt-to-app editor: same job, own name, own palette, own code.</p>
+        <ul class="about-list">
+          <li><strong>Real files.</strong> Every build is index.html, styles.css and app.js, editable in Code view.</li>
+          <li><strong>A deterministic agent.</strong> Ten blueprints and a fixed set of follow-up moves — no model, no key, no cost. It refuses what it cannot do.</li>
+          <li><strong>Sandboxed previews.</strong> Generated code runs in an opaque origin, so it cannot read your session.</li>
+          <li><strong>Nothing borrowed.</strong> No original markup, copy, logos, fonts or endpoints. Layout conventions only.</li>
+        </ul>
+      </div>
+
+      <div class="dialog" id="dlg-search" role="dialog" aria-modal="true" aria-labelledby="search-title" hidden>
+        <h2 id="search-title" class="sr-only">Search projects</h2>
+        <label class="search-field large">
+          <svg class="ico"><use href="#i-search"></use></svg>
+          <input type="search" id="palette-input" placeholder="Search projects…" aria-label="Search projects" />
+        </label>
+        <div class="palette-results" id="palette-results"></div>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

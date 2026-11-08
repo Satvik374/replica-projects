@@ -1,0 +1,23 @@
+{
+  "_about": "Anvel brand: what must never appear in the shipped code. Used by replica-brand/sweep.py and by the deploy preflight.",
+  "name": "Anvel",
+  "tagline": "Describe it. Ship it.",
+  "avoid": [
+    "bolt.new",
+    "Bolt.new",
+    "bolt",
+    "StackBlitz",
+    "stackblitz",
+    "WebContainer",
+    "bolt.host",
+    "What will you build today",
+    "Build now in seconds"
+  ],
+  "domains": ["bolt.new", "bolt.host", "stackblitz.com", "stackblitz.io"],
+  "colors": ["#006bff", "#1389fd", "#2f5bea", "#0d6efd"],
+  "notes": [
+    "Palette is amber (#f0a13c) on graphite, deliberately outside the original's blue family.",
+    "No original copy, markup, icons, fonts or endpoints were used.",
+    "Typeface is the system stack; the original's font is not shipped or named."
+  ]
+}
