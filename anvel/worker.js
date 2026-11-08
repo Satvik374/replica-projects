@@ -406,7 +406,7 @@ async function handleApi(request, env, url) {
 
   if (path === "/health") {
     const hasDb = !!env.DB;
-    return json({ ok: hasDb, db: hasDb });
+    return json({ ok: hasDb, db: hasDb, mode: env.DB_MODE || (hasDb ? "d1" : "none") });
   }
 
   if (path === "/auth/signup" && method === "POST") {

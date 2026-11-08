@@ -155,6 +155,7 @@ const DB = connectionString ? pgDatabase(connectionString) : sqliteDatabase(dbPa
 
 const env = {
   DB,
+  DB_MODE: connectionString ? "postgres" : "sqlite-ephemeral",
   ASSETS: {
     async fetch() {
       return new Response("Not found", { status: 404 });
