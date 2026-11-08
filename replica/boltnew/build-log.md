@@ -41,6 +41,9 @@ checking rather than assuming. Dates are the working session's clock (2026-11-08
 | 8 | Parity tool crashed | unquoted commas in my feature matrix | quoted every field |
 | 9 | Toolbar collisions: project title over Preview/Code, Save over the tab strip, lone `/` address pill | flex children without shrink limits | measured the boxes, constrained each, re-measured |
 | 10 | A published site rendered unstyled | the page is served at `/s/:slug` with no trailing slash, so `styles.css` resolved to `/s/styles.css` and 404'd | published HTML inlines its CSS/JS, so a site is one request |
+| 12 | "make it dark" said it moved the palette, and nothing changed | the swap replaced the whole `:root` match without keeping it, so the file lost its selector and every token between the rewritten ones; then the palette keys (`bg`) were looked up against `--bg` | the swap now edits values inside the first `:root` block and rewrites the selector only if it is missing |
+| 13 | A light project was told it was "already dark" | the guard searched the whole file for the dark hex, and a leftover declaration matched | the guard reads the first `:root` background and measures its luminance |
+| 14 | Preview/Code thumb sat under Code while Preview was selected | the workspace never reset the view, so the attribute outlived the project | opening a project calls the tab switch itself |
 | 11 | Chat said "Wrote index.html · 0 lines" after a model turn | the line count was taken from the model's own step metadata, which is often absent or wrong | the server counts the lines of the files it actually received |
 
 ## Real model integration (after the rebuild)

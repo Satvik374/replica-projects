@@ -262,16 +262,43 @@ function setAccent(files, hex) {
   return next;
 }
 
+/* Read the theme off the first `:root` background rather than hunting for a
+   known hex anywhere in the file: a leftover declaration from an older edit once
+   convinced the follow-up that a light project was already dark. */
+function themeIsDark(css) {
+  const root = String(css || "").match(/:root\s*\{([^}]*)\}/);
+  const block = root ? root[1] : String(css || "");
+  const value = (block.match(/--bg\s*:\s*([^;}]+)/i) || [])[1] || "";
+  const hex = value.trim().replace(/^#/, "");
+  if (!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) return false;
+  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.4;
+}
+
 function setTheme(files, dark) {
   const css = read(files, "styles.css");
-  const block = dark
-    ? `--bg:#0e1013; --surface:#16191f; --surface-2:#1d2129; --line:#2a2f38;\n  --ink:#eef1f5; --muted:#9aa4b2;`
-    : `--bg:#fbfaf7; --surface:#ffffff; --surface-2:#f5f2ea; --line:#e6e1d6;\n  --ink:#171512; --muted:#5f594f;`;
-  let next = write(
-    files,
-    "styles.css",
-    css.replace(/(:root\{[\s\S]*?--bg:)[^;]+;([\s\S]*?--surface:)[^;]+;([\s\S]*?--surface-2:)[^;]+;([\s\S]*?--line:)[^;]+;([\s\S]*?--ink:)[^;]+;([\s\S]*?--muted:)[^;]+;/, block)
-  );
+  const palette = dark
+    ? { bg: "#0e1013", surface: "#16191f", "surface-2": "#1d2129", line: "#2a2f38", ink: "#eef1f5", muted: "#9aa4b2" }
+    : { bg: "#fbfaf7", surface: "#ffffff", "surface-2": "#f5f2ea", line: "#e6e1d6", ink: "#171512", muted: "#5f594f" };
+
+  /* Swap values only. A blind whole-block replacement once ate the `:root{`
+     selector and every token between the ones it rewrote, which left the file
+     with declarations outside a rule — valid-looking text, no styles at all. */
+  const root = css.match(/:root\s*\{[^}]*\}/);
+  let css2 = css;
+  if (root) {
+    const swapped = root[0].replace(/(--[a-z0-9-]+)\s*:\s*[^;}]+/gi, (decl, name) => {
+      const key = name.replace(/^--/, "");
+      return Object.prototype.hasOwnProperty.call(palette, key) ? `${name}:${palette[key]}` : decl;
+    });
+    css2 = css.replace(root[0], swapped);
+  } else {
+    css2 = `:root{${Object.entries(palette)
+      .map(([name, value]) => `--${name}:${value}`)
+      .join(";")}}\n${css}`;
+  }
+  let next = write(files, "styles.css", css2);
   const html = read(next, "index.html");
   if (html) {
     next = write(
@@ -451,7 +478,7 @@ export function followUp(prompt, files) {
   }
 
   if (/\bdark\b|night mode|darker/.test(lower) && !/light/.test(lower)) {
-    if (before.includes("--bg:#0e1013")) {
+    if (themeIsDark(read(files, "styles.css"))) {
       did.push("It is already on the dark palette, so the files did not change.");
     } else {
       next = setTheme(next, true);

@@ -22,7 +22,7 @@ Date: 2026-11-08
 | 8 | publish | https://support.bolt.new/bolt-cloud/hosting/publish | public/private, edit subdomain, Update vs Publish, Unpublish |
 | 9 | manage projects | https://support.bolt.new/managing-projects/projects-files | dashboard list, kebab actions, duplicate, delete consequences |
 | 10 | tokens + billing | https://support.bolt.new/account/tokens, /account/billing | 300K/day, 1M/month free; code edits are free |
-| 11 | the user's own account (satvik308, Free) | https://bolt.new/projects | sidebar, empty dashboard state, plan badge |
+| 11 | the user's own signed-in session (Free plan) | https://bolt.new/projects | sidebar, empty dashboard state, plan badge — the session was still live in this browser on 2026-11-08, which is how the signed-in chrome was observed |
 | 12 | in-product screenshots (docs CDN) | `screens/` in this folder | dashboard, workspace, version history, publish popover, preview controls |
 
 ## Core loop
@@ -47,6 +47,37 @@ in place → keep prompting, or edit the code yourself → publish it to a URL.
 | S11 | Account settings | profile → Settings | preferences + usage | left nav (General, Subscription & Tokens, Connected apps…), General: appearance, "Display token usage in chat", default model | — |
 | S12 | Published site | `https://<slug>.bolt.host` | the shipped app | plain static site, no editor chrome | live, restricted (private), offline after unpublish |
 | S13 | Mobile workspace | narrow width | check the app | chat cards per build, tap → full-screen preview, "Back to chat" | — |
+
+## Motion and interaction (measured, not guessed)
+
+Read from the running app's computed styles and CSSOM on 2026-11-08, signed in on
+the account in source 11. Values only — no keyframes, gradients or class names
+were copied, and none of their code ships here.
+
+| Surface | Observed | Reading |
+| --- | --- | --- |
+| Colour / background / border changes | `0.15s cubic-bezier(0.4, 0, 0.2, 1)` | one short standard-eased transition everywhere |
+| Sidebar collapse | `width 0.3s` same easing | layout changes are slower than state changes |
+| Section and card reveals | `0.4s–0.5s` on opacity and transform, `cubic-bezier(0.22, 1, 0.36, 1)` | entrances decelerate hard, exits are near-instant |
+| Toasts | fade + `scale(0.8) → 1` | short and springy, not a slide |
+| Send button becoming usable | ~0.42s keyframe: `scale(0.97) → 1.04 → 1` with a brightness/shine pulse | the only celebratory moment in the composer |
+| Disabled send | `opacity: 0.5`, colour unchanged | state is a dim, not a recolour |
+| Loading | shimmer sweep plus a 0.8→0.5 opacity pulse | skeleton, never a spinner-only wait |
+| Card hover | lift `translateY(-0.125rem)` and thumbnail `scale(1.05)` | hover moves the object, not the text |
+| Focus | `2px` outline, `2px` offset | visible ring on every control |
+| Menus / popovers | opacity + `translateY(-4px)` + `scale(0.98)` | attached to their trigger |
+
+### How Anvel maps it
+
+| Anvel | Token / rule |
+| --- | --- |
+| `--fast` 150ms `--ease` | buttons, chips, links, icon buttons, menu rows |
+| `--base` 200ms `--ease-out` | dialogs, toasts, message and view entrances |
+| `--slow` 300ms `--ease-soft` | the Preview/Code thumb, sidebar, usage meter |
+| `send-enable` | 420ms scale + brightness once, when the composer becomes sendable |
+| `.step` stagger | `--i` per row, 35ms apart |
+| `shimmer` | preview loading bar |
+| `prefers-reduced-motion` | one global override kills every duration and scroll smoothing |
 
 ## Flows
 

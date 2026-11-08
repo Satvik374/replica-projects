@@ -93,7 +93,15 @@ function mountComposer(host, options = {}) {
     textarea.style.height = `${Math.min(180, textarea.scrollHeight)}px`;
   };
   const sync = () => {
+    const wasDisabled = send.disabled;
     send.disabled = !textarea.value.trim() || state.busy;
+    /* One shine the moment the button becomes usable, then never again until it
+       is disabled and re-armed. Restart the animation by forcing a reflow. */
+    if (wasDisabled && !send.disabled) {
+      send.classList.remove("is-enabled");
+      void send.offsetWidth;
+      send.classList.add("is-enabled");
+    }
     resize();
   };
 
@@ -593,6 +601,8 @@ async function openWorkspace(id) {
     renderVersions();
     renderPublish();
     refreshPreview();
+    /* Reopening a project always lands on Preview, including the sliding thumb. */
+    switchTab("preview");
     if (state.editor) state.editor.setFiles(state.files);
     $("#publish-label").textContent = state.deploy ? "Update" : "Publish";
     $("#view-workspace").hidden = false;
@@ -750,7 +760,7 @@ async function runTurn(prompt, outcome) {
   for (const step of outcome.steps || []) {
     stepsList.insertAdjacentHTML(
       "beforeend",
-      `<li class="step ${esc(step.kind || "")}"><span class="step-dot" aria-hidden="true"></span><span class="step-text">${esc(
+      `<li class="step ${esc(step.kind || "")}" style="--i:${steps.length}"><span class="step-dot" aria-hidden="true"></span><span class="step-text">${esc(
         step.path ? `Wrote ${step.path} · ${step.lines} lines` : step.text || ""
       )}</span></li>`
     );
@@ -1079,6 +1089,7 @@ function switchTab(tab) {
   const preview = tab === "preview";
   $("#tab-preview").setAttribute("aria-selected", String(preview));
   $("#tab-code").setAttribute("aria-selected", String(!preview));
+  $("#tab-preview").closest(".seg")?.setAttribute("data-active", preview ? "preview" : "code");
   $("#preview-host").hidden = !preview;
   $("#code-host").hidden = preview;
   $("#preview-tools")?.setAttribute("hidden", String(!preview));
