@@ -39,6 +39,8 @@ checking rather than assuming. Dates are the working session's clock (2026-11-08
 | 6 | A 401 in the console on every page load | `GET /me` answered 401 for guests | answers 200 with `user: null`; everything else stays 401 |
 | 7 | Brand sweep failed on shipped code | a selectable blue used the original's hex, and a comment named the recon folder | replaced the blue, reworded the comment |
 | 8 | Parity tool crashed | unquoted commas in my feature matrix | quoted every field |
+| 9 | Toolbar collisions: project title over Preview/Code, Save over the tab strip, lone `/` address pill | flex children without shrink limits | measured the boxes, constrained each, re-measured |
+| 10 | A published site rendered unstyled | the page is served at `/s/:slug` with no trailing slash, so `styles.css` resolved to `/s/styles.css` and 404'd | published HTML inlines its CSS/JS, so a site is one request |
 
 Each of 1–8 was found by running the thing, not by reading it. 3 and 4 were only visible
 in a real browser; curl alone showed both as healthy.

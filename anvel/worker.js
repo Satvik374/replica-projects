@@ -742,6 +742,25 @@ const notFoundPage = (message) => `<!doctype html>
 </style></head>
 <body><div class="card"><h1>${message.title}</h1><p>${message.copy}</p><a href="/">Open Anvel</a></div></body></html>`;
 
+/* A published page is served from /s/:slug (no trailing slash), so a relative
+   <link href="styles.css"> would resolve against /s/ and ask for /s/styles.css,
+   which is a different slug. Inlining keeps a published page one request and
+   also means a private site's assets never need the access key. */
+function inlineAssets(html, files) {
+  const byPath = new Map(files.map((file) => [file.path, file.content]));
+  const lookup = (ref) => byPath.get(String(ref).replace(/^\.?\//, "").split("?")[0]);
+  let out = html.replace(/<link\b[^>]*href=["']([^"']+)["'][^>]*>/gi, (tag, href) => {
+    if (!/\.css(\?|$)/i.test(href)) return tag;
+    const css = lookup(href);
+    return css === undefined ? tag : `<style>${css}</style>`;
+  });
+  out = out.replace(/<script\b[^>]*src=["']([^"']+)["'][^>]*>\s*<\/script>/gi, (tag, src) => {
+    const js = lookup(src);
+    return js === undefined ? tag : `<script>${js.replace(/<\/script/gi, "<\\/script")}</script>`;
+  });
+  return out;
+}
+
 async function servePublished(request, env, url) {
   const parts = url.pathname.split("/").filter(Boolean); // ["s", slug, ...rest]
   const slug = parts[1];
@@ -776,7 +795,8 @@ async function servePublished(request, env, url) {
     });
   }
   const ext = (file.path.split(".").pop() || "html").toLowerCase();
-  return new Response(file.content, {
+  const body = ext === "html" ? inlineAssets(file.content, files) : file.content;
+  return new Response(body, {
     headers: {
       "content-type": MIME[ext] || "text/plain; charset=utf-8",
       "cache-control": "public, max-age=60",
