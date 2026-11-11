@@ -40,6 +40,28 @@ browser's own tools instead. That is a real gap in automation, not a pass.
   exists and is empty. Publishing it needs the owner's explicit go, and there is
   nothing production-specific to configure yet (no domain, no email, no payments).
 
+### Vercel (temporary, anonymous)
+
+- `vercel deploy --temporary` from `claude-clone`, CLI 65.14.0, no account and no
+  token: `https://brisk-zircon-k8s6uvc.tmp.now`.
+- **Expires 60 minutes after creation.** The claim link was given to the owner in
+  chat and deliberately not written here, because this file is committed.
+- 45/45 API checks on that URL, `/api/health` → `db:true`, static CSS/JS 200, and
+  `/s/:token` returns the app shell for client-side rendering.
+- **No persistent database.** No `POSTGRES_URL` was available, so the adapter used
+  `node:sqlite` at `/tmp/alcove-vercel.db`. Accounts survive in a warm instance and
+  disappear on cold starts; this is a smoke test, not a usable deployment.
+- To make it real: authenticate the CLI, create Vercel Postgres or connect Neon,
+  set `POSTGRES_URL`, and redeploy. Nothing in the code changes.
+
+### Vercel setup state
+
+- CLI: installed locally at `~/.local/share/vercel` (global npm install was blocked
+  by permissions), version 65.14.0.
+- Login: **blocked** — needs the owner's browser or a `VERCEL_TOKEN` secret.
+- Vercel plugin / MCP: not applicable to this agent runtime; no MCP client config
+  file exists here to merge into. Recorded as blocked rather than claimed.
+
 ## Verified on the deployed origin
 
 - `GET /api/health` → `200 {"ok":true,"db":true}`.
