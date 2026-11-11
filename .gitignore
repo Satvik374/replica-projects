@@ -6,3 +6,6 @@ replica/boltnew/screens/
 cadence/node_modules/
 cadence/dist/
 cadence/release/
+
+# site-ui-clone reference captures
+clones/*/reference/
