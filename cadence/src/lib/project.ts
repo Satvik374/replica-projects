@@ -34,6 +34,8 @@ function normalizeLayer(raw: Layer): Layer {
       rotation: normalizeProperty(raw.transform?.rotation),
       opacity: normalizeProperty(raw.transform?.opacity),
     },
+    audio: raw.audio ? { assetId: raw.audio.assetId, volume: Number(raw.audio.volume) || 0 } : undefined,
+    trackMatte: raw.trackMatte ?? 'none',
   };
 }
 
@@ -47,8 +49,24 @@ export function normalizeProject(raw: Project): Project {
     duration: Math.max(1, Number(comp.duration) || 150),
     bg: comp.bg || '#0b0b0f',
     layers: (Array.isArray(comp.layers) ? comp.layers : []).map(normalizeLayer),
+    markers: (Array.isArray(comp.markers) ? comp.markers : [])
+      .filter((marker) => marker && Number.isFinite(marker.t))
+      .map((marker, index) => ({
+        id: marker.id || uid('marker'),
+        t: Math.max(0, Math.round(marker.t)),
+        label: marker.label || `Marker ${index + 1}`,
+        color: marker.color,
+      })),
   }));
-  const assets: Asset[] = Array.isArray(raw.assets) ? raw.assets : [];
+  const assets: Asset[] = (Array.isArray(raw.assets) ? raw.assets : []).map((asset) => ({
+    ...asset,
+    kind: asset.kind === 'audio' ? 'audio' : 'image',
+    width: Number(asset.width) || 0,
+    height: Number(asset.height) || 0,
+    duration: asset.duration !== undefined ? Number(asset.duration) : undefined,
+    peaks: Array.isArray(asset.peaks) ? asset.peaks : undefined,
+    sampleRate: asset.sampleRate !== undefined ? Number(asset.sampleRate) : undefined,
+  }));
   const activeCompId = comps.some((c) => c.id === raw.activeCompId) ? raw.activeCompId : comps[0]?.id ?? '';
   return {
     format: 'cadence-project',

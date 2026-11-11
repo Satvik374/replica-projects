@@ -5,6 +5,7 @@ import {
   Circle,
   Diamond,
   Layers,
+  Music,
   Plus,
   SlidersHorizontal,
   Square,
@@ -17,8 +18,8 @@ import { EFFECT_CATEGORIES, effectsInCategory, EFFECTS_BY_ID } from '../engine/e
 import { kindForEffectParam, getProperty, TRANSFORM_ROWS, type PropertySlot } from '../lib/property';
 import { num, vec, formatNumber } from '../lib/core';
 import { sampleColor, sampleNumber, sampleProperty, sampleVec } from '../lib/keyframes';
-import type { Layer, Mask, PropValue } from '../types';
-import { BLEND_MODES } from '../types';
+import type { Asset, Layer, Mask, PropValue, TrackMatte } from '../types';
+import { BLEND_MODES, TRACK_MATTE_OPTIONS } from '../types';
 import { Panel } from './Panel';
 import { ColorField, NumberField, PointField, SelectField, TextCommitField } from './fields';
 
@@ -27,6 +28,7 @@ function layerTypeIcon(layer: Layer) {
   if (layer.type === 'shape') return <Circle size={13} />;
   if (layer.type === 'solid') return <Square size={13} />;
   if (layer.type === 'adjustment') return <SlidersHorizontal size={13} />;
+  if (layer.type === 'audio') return <Music size={13} />;
   return <Layers size={13} />;
 }
 
@@ -295,6 +297,66 @@ function MaskEditor({ layer, mask }: { layer: Layer; mask: Mask }) {
   );
 }
 
+function AudioSection({ layer, asset }: { layer: Layer; asset?: Asset }) {
+  const [busy, setBusy] = useState(false);
+  const volume = layer.audio?.volume ?? 100;
+  return (
+    <div className="section">
+      <div className="section-head">
+        <span className="section-title">Audio</span>
+        <span className="section-spacer" />
+        <span className="dim" style={{ fontSize: 'var(--text-2xs)' }}>
+          {asset?.duration ? `${asset.duration.toFixed(1)}s` : 'offline'}
+        </span>
+      </div>
+      <div className="prop-row">
+        <span className="prop-name">Level</span>
+        <div className="prop-fields">
+          <NumberField
+            value={volume}
+            onChange={(value) =>
+              useEditor.getState().updateLayer(layer.id, {
+                audio: layer.audio ? { ...layer.audio, volume: value } : undefined,
+              })
+            }
+            min={0}
+            max={200}
+            unit="%"
+            label="Audio level"
+          />
+        </div>
+      </div>
+      <div className="prop-row">
+        <span className="prop-name">Source</span>
+        <div className="prop-fields">
+          <span className="dim mono" style={{ fontSize: 'var(--text-2xs)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {asset?.name ?? 'Media offline'}
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        className="btn"
+        style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}
+        disabled={busy || !asset}
+        onClick={async () => {
+          setBusy(true);
+          try {
+            await useEditor.getState().detectAudioBeats(layer.id);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <Music size={12} /> {busy ? 'Analyzing…' : 'Detect beats'}
+      </button>
+      <p className="hint" style={{ margin: '6px 0 0' }}>
+        Adds composition markers at detected onsets and estimates the tempo.
+      </p>
+    </div>
+  );
+}
+
 export function Inspector() {
   const comp = useActiveComp();
   const selection = useEditor((state) => state.selection);
@@ -383,6 +445,21 @@ export function Inspector() {
                   />
                 </div>
               </div>
+              {layer.type !== 'audio' && comp.layers[0]?.id !== layer.id ? (
+                <div className="prop-row">
+                  <span className="prop-name">Track matte</span>
+                  <div className="prop-fields">
+                    <SelectField
+                      value={layer.trackMatte ?? 'none'}
+                      onChange={(value) =>
+                        useEditor.getState().updateLayer(layer.id, { trackMatte: value as TrackMatte })
+                      }
+                      options={TRACK_MATTE_OPTIONS.map((option) => ({ value: option.id, label: option.label }))}
+                      label="Track matte"
+                    />
+                  </div>
+                </div>
+              ) : null}
               <div className="prop-row">
                 <span className="prop-name">Label</span>
                 <div className="prop-fields" style={{ gap: 4 }}>
@@ -407,17 +484,25 @@ export function Inspector() {
                   )}
                 </div>
               </div>
-              {layer.type === 'image' && layer.image ? (
+              {(layer.type === 'image' && layer.image) || (layer.type === 'audio' && layer.audio) ? (
                 <div className="prop-row">
                   <span className="prop-name">Footage</span>
                   <div className="prop-fields">
                     <span className="dim mono" style={{ fontSize: 'var(--text-2xs)' }}>
-                      {assets.find((asset) => asset.id === layer.image?.assetId)?.name ?? 'Media offline'}
+                      {assets.find((asset) => asset.id === (layer.image?.assetId ?? layer.audio?.assetId))?.name ??
+                        'Media offline'}
                     </span>
                   </div>
                 </div>
               ) : null}
             </div>
+
+            {layer.type === 'audio' && layer.audio ? (
+              <AudioSection
+                layer={layer}
+                asset={assets.find((asset) => asset.id === layer.audio?.assetId)}
+              />
+            ) : null}
 
             <div className="section">
               <div className="section-head">

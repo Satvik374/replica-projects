@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FilePlus2, Search, Settings2, Upload } from 'lucide-react';
+import { FilePlus2, Music, Search, Settings2, Upload } from 'lucide-react';
 import { useActiveComp, useEditor } from '../store';
 import { useUI } from '../ui';
 import { Panel } from './Panel';
@@ -24,6 +24,14 @@ function CompThumb({ comp }: { comp: Comp }) {
 }
 
 function AssetThumb({ asset }: { asset: Asset }) {
+  if (asset.kind === 'audio') {
+    return (
+      <div className="audio-thumb">
+        <Music size={20} />
+        <span>{asset.duration ? `${asset.duration.toFixed(1)}s` : 'Audio'}</span>
+      </div>
+    );
+  }
   return <img src={asset.dataUrl} alt="" loading="lazy" />;
 }
 
@@ -32,6 +40,7 @@ export function ProjectPanel() {
   const activeComp = useActiveComp();
   const setActiveComp = useEditor((state) => state.setActiveComp);
   const addImageLayer = useEditor((state) => state.addImageLayer);
+  const addAudioLayer = useEditor((state) => state.addAudioLayer);
   const search = useUI((state) => state.projectSearch);
   const setSearch = useUI((state) => state.setProjectSearch);
   const openDialog = useUI((state) => state.openDialog);
@@ -66,7 +75,7 @@ export function ProjectPanel() {
           <button
             className="panel-icon"
             type="button"
-            title="Import footage (Ctrl+I)"
+            title="Import image or audio (Ctrl+I)"
             aria-label="Import footage"
             onClick={pickImages}
           >
@@ -141,21 +150,25 @@ export function ProjectPanel() {
             key={asset.id}
             className={`project-item${selected?.id === asset.id ? ' selected' : ''}`}
             onClick={() => setSelected({ kind: 'asset', id: asset.id })}
-            onDoubleClick={() => addImageLayer(asset.id)}
+            onDoubleClick={() =>
+              asset.kind === 'audio' ? addAudioLayer(asset.id) : addImageLayer(asset.id)
+            }
             onContextMenu={(event) => {
               event.preventDefault();
               setSelected({ kind: 'asset', id: asset.id });
               openContextMenu({ kind: 'asset', assetId: asset.id, x: event.clientX, y: event.clientY });
             }}
-            title={`${asset.name} — ${asset.width}×${asset.height}. Double-click to add to the open composition.`}
+            title={`${asset.name} — ${asset.kind === 'audio' ? `${(asset.duration ?? 0).toFixed(1)}s audio` : `${asset.width}×${asset.height}`}. Double-click to add to the open composition.`}
           >
             <div className="project-thumb">
               <AssetThumb asset={asset} />
             </div>
             <div className="project-item-name">{asset.name}</div>
             <div className="project-item-meta">
-              <span className="type-dot" style={{ background: 'var(--teal)' }} />
-              <span className="mono">{asset.width}×{asset.height}</span>
+              <span className="type-dot" style={{ background: asset.kind === 'audio' ? 'var(--accent)' : 'var(--teal)' }} />
+              <span className="mono">
+                {asset.kind === 'audio' ? `${(asset.duration ?? 0).toFixed(1)}s` : `${asset.width}×${asset.height}`}
+              </span>
             </div>
           </button>
         ))}
@@ -164,7 +177,7 @@ export function ProjectPanel() {
       {comps.length === 0 && assets.length === 0 ? (
         <div className="panel-empty">
           <strong>{filter ? 'Nothing matches that search.' : 'This project is empty.'}</strong>
-          {filter ? 'Try a shorter name.' : 'Create a composition or import an image to begin.'}
+          {filter ? 'Try a shorter name.' : 'Create a composition or import an image or audio file to begin.'}
         </div>
       ) : null}
 

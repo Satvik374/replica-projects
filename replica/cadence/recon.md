@@ -35,6 +35,8 @@ layout follows public documentation of the workflow, not any proprietary file.
 | S12 | Help dialogs | Help menu | shortcuts and about | shortcut grid, about panel | — |
 | S13 | Character panel | select a text layer | typography | text area, font, style, size, leading, tracking, colour, alignment | no text layer, text selected |
 | S14 | Info panel | always | readouts | comp/frame/timecode/fps/resolution/pointer/selection/tool | pointer inside/outside viewer |
+| S15 | Audio and beats | import audio, select audio layer | audio editing and timing | waveform bar, level, source, Detect beats, ruler markers | imported, playing, beat markers, no beats found |
+| S16 | Track matte and split | matte picker, Ctrl+Shift+D | compositing and edit timing | track matte picker, matte badge, split layer bars | alpha, luma, inverted, split halves |
 
 ## Flows
 
@@ -58,6 +60,12 @@ Edge: old/malformed project file, autosave restore, unsaved changes on New Proje
 
 **F07 Grade with an adjustment layer** — Layer ▸ New Adjustment Layer → add grain and vignette in S06 → effects apply to everything beneath, not to the UI.
 Edge: adjustment layer with no enabled effects, solo another layer.
+
+**F08 Import audio and mark beats** — S09 import or drop a WAV/MP3 → double-click the asset → S15 audio bar appears → set level → Detect beats → markers fill the ruler → play → split or trim the audio.
+Edge: no clear onsets, short clip, audio layer outside its in/out range, split at the playhead.
+
+**F09 Matte and split** — S06 Track matte picker → the layer directly above cuts the selected layer by alpha or luma (the source stops drawing itself) → Ctrl+Shift+D at the playhead splits selected layers into two trimmed halves with effects and keys intact.
+Edge: matte source out of range/hidden, top layer has no source, split outside a layer's range.
 
 ## Components
 
@@ -86,10 +94,12 @@ Edge: adjustment layer with no enabled effects, solo another layer.
 
 ```
 Project   name, comps[], assets[], activeCompId                       confidence high
-Comp      id, name, width, height, fps, duration(frames), bg, layers[]  high
-Layer     id, name, type(solid|text|shape|image|null|adjustment),
+Comp      id, name, width, height, fps, duration(frames), bg, layers[],
+          markers[{id, t, label, color}]                                 high
+Layer     id, name, type(solid|text|shape|image|audio|null|adjustment),
           label, enabled, solo, locked, inPoint, outPoint, parentId,
-          blend, transform, effects[], masks[], + type payload        high
+          blend, transform, effects[], masks[], trackMatte,
+          + type payload (audio: assetId, volume)                         high
 Transform anchor, position, scale, rotation, opacity — each an
           animated property { value, keys[] }                          high
 Keyframe  t(frames), v(number|vec2|colour), ease(linear|ease|easeIn|
@@ -97,18 +107,19 @@ Keyframe  t(frames), v(number|vec2|colour), ease(linear|ease|easeIn|
 Effect    id, defId, name, enabled, params{key: property}              high
 Mask      id, shape(rect|ellipse), mode(add|subtract), position, size,
           rotation, feather, opacity                                  evidence: masks workflow
-Asset     id, name, kind(image), dataUrl, width, height                high (self-contained project)
+Asset     id, name, kind(image|audio), dataUrl, width, height,
+          duration, peaks[], sampleRate (audio)                         high (self-contained project)
 ```
 
-Not modelled: layer time remapping, track mattes, 3D transforms, text animators, expressions,
-audio, render queue items, output modules, cameras and lights. Each is either out of scope or
-listed as `no` in `features.csv`.
+Not modelled: layer time remapping, 3D transforms, text animators, expressions, precompositions,
+render queue items, output modules, audio effects/meters, cameras and lights. Each is either out
+of scope or listed as `no`/`partial` in `features.csv`.
 
 ## Feature matrix
 
-`features.csv` — 76 rows. Must-haves cover composing, animating, compositing and exporting a
-short piece; `skip` rows are the proprietary or licensed parts (AEP format, Adobe plug-in SDK,
-stock content).
+`features.csv` — 70 rows. Must-haves cover composing, animating, compositing, audio timing and
+exporting a short piece; `skip` rows are the proprietary or licensed parts (AEP format, Adobe
+plug-in SDK, stock content).
 
 ## What cannot be cloned
 
@@ -122,9 +133,10 @@ stock content).
 
 ## Size
 
-Screens: 14. Flows: 7. Entities: 8. Hard parts: a correct compositing order (masks → effects →
-transform → blend), keyframe interpolation across number/vector/colour values, a dense timeline
-that stays readable, and desktop packaging without a build server.
+Screens: 16. Flows: 9. Entities: 8. Hard parts: a correct compositing order (masks → effects →
+transform → matte → blend), keyframe interpolation across number/vector/colour values, a dense
+timeline that stays readable, an audio transport that survives seeking/splitting, and desktop
+packaging without a build server.
 
 Size: **L** for full parity, **M** for this scoped build. Done in one session: core loop end to
 end, must-haves complete, some should-haves partial by design.

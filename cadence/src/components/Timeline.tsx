@@ -6,7 +6,9 @@ import {
   Diamond,
   Eye,
   EyeOff,
+  Flag,
   Image as ImageIcon,
+  Music,
   Lock,
   LockOpen,
   Search,
@@ -48,9 +50,32 @@ function typeIcon(layer: Layer) {
       return <ImageIcon size={11} />;
     case 'adjustment':
       return <SlidersHorizontal size={11} />;
+    case 'audio':
+      return <Music size={11} />;
     default:
       return <BoxSelect size={11} />;
   }
+}
+
+function AudioWave({ assetId }: { assetId: string }) {
+  const peaks = useEditor((state) => state.project.assets.find((asset) => asset.id === assetId)?.peaks);
+  if (!peaks || peaks.length < 2) return null;
+  let top = '';
+  let bottom = '';
+  const last = peaks.length - 1;
+  peaks.forEach((peak, index) => {
+    const x = (index / last) * 100;
+    top += `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${(50 - peak * 44).toFixed(2)} `;
+  });
+  for (let index = last; index >= 0; index--) {
+    const x = (index / last) * 100;
+    bottom += `L${x.toFixed(2)} ${(50 + peaks[index] * 44).toFixed(2)} `;
+  }
+  return (
+    <svg className="audio-wave" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d={`${top}${bottom}Z`} />
+    </svg>
+  );
 }
 
 function allKeyframes(layer: Layer): Keyframe[] {
@@ -314,6 +339,14 @@ export function Timeline() {
         >
           Collapse
         </button>
+        <button
+          type="button"
+          className="ease-btn"
+          title="Add a composition marker at the playhead (M)"
+          onClick={() => useEditor.getState().addMarker()}
+        >
+          <Flag size={10} style={{ verticalAlign: '-1px' }} /> Marker
+        </button>
         <label className="tl-search">
           <Search size={11} />
           <input
@@ -357,6 +390,24 @@ export function Timeline() {
                     {formatNumber(tick.frame / comp.fps, 0)}s
                   </span>
                 ))}
+              {(comp.markers ?? []).map((marker) => (
+                <button
+                  key={marker.id}
+                  type="button"
+                  className="tl-marker"
+                  style={{ left: marker.t * pxPerFrame, background: marker.color ?? 'var(--accent)' }}
+                  title={`${marker.label} · frame ${marker.t}. Double-click to remove.`}
+                  aria-label={`Marker ${marker.label} at frame ${marker.t}`}
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    useEditor.getState().setTime(marker.t);
+                  }}
+                  onDoubleClick={(event) => {
+                    event.stopPropagation();
+                    useEditor.getState().removeMarker(marker.id);
+                  }}
+                />
+              ))}
             </div>
           </div>
 
@@ -464,7 +515,7 @@ export function Timeline() {
                     }}
                   >
                     <div
-                      className={`tl-bar${isSelected ? ' selected' : ''}`}
+                      className={`tl-bar${isSelected ? ' selected' : ''}${layer.type === 'audio' ? ' audio' : ''}`}
                       style={{
                         left: layer.inPoint * pxPerFrame,
                         width: barWidth,
@@ -476,7 +527,13 @@ export function Timeline() {
                       title={`${layer.name} · in ${layer.inPoint}, out ${layer.outPoint}. Drag to slide, edges to trim.`}
                       onPointerDown={(event) => startBarDrag(event, layer, 'move')}
                     >
+                      {layer.type === 'audio' && layer.audio ? <AudioWave assetId={layer.audio.assetId} /> : null}
                       <span className="bar-label">{layer.name}</span>
+                      {layer.trackMatte && layer.trackMatte !== 'none' ? (
+                        <span className="matte-badge" title="This layer is cut by the layer above it">
+                          M
+                        </span>
+                      ) : null}
                       <span
                         className="trim-handle left"
                         onPointerDown={(event) => startBarDrag(event, layer, 'trim-left')}

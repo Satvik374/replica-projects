@@ -84,6 +84,8 @@ export function contentSize(layer: Layer, comp: Comp, assets: Asset[]): ContentS
       return { w: 100, h: 100 };
     case 'adjustment':
       return { w: comp.width, h: comp.height };
+    case 'audio':
+      return { w: 1, h: 1 };
   }
 }
 

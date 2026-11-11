@@ -1,4 +1,4 @@
-import type { Asset, BlendMode, Comp, Layer, Mask } from '../types';
+import type { Asset, BlendMode, Comp, Layer, Mask, TrackMatte } from '../types';
 import { clamp } from '../lib/core';
 import { sampleNumber } from '../lib/keyframes';
 import { worldMatrix, worldOpacity } from '../lib/matrix';
@@ -121,6 +121,79 @@ function applyMasks(
   return out;
 }
 
+/**
+ * Renders a layer into a composition-sized transparent plane, with its contents, effects,
+ * masks and world transform already applied. Track mattes and normal compositing both use this.
+ */
+function renderLayerPlane(
+  layer: Layer,
+  comp: Comp,
+  frame: number,
+  scale: number,
+  assets: Asset[],
+  layersById: Map<string, Layer>,
+  bakeOpacity: boolean,
+): HTMLCanvasElement | null {
+  const opacity = clamp(worldOpacity(layer, layersById, frame) / 100, 0, 1);
+  if (opacity <= 0) return null;
+  const matrix = worldMatrix(layer, layersById, frame);
+  const pad = effectPadding(layer, frame);
+  const content = renderLayerContent(layer, comp, assets, scale, pad);
+  let rendered = applyEffects(content.canvas, layer.effects, frame, scale);
+  rendered = applyMasks(rendered, layer, scale, content.width, content.height, pad);
+
+  const plane = document.createElement('canvas');
+  plane.width = Math.max(1, Math.round(comp.width * scale));
+  plane.height = Math.max(1, Math.round(comp.height * scale));
+  const pctx = plane.getContext('2d');
+  if (!pctx) return null;
+  pctx.save();
+  if (bakeOpacity) pctx.globalAlpha = opacity;
+  pctx.setTransform(scale, 0, 0, scale, 0, 0);
+  pctx.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
+  pctx.drawImage(
+    rendered,
+    -(pad + content.width / 2),
+    -(pad + content.height / 2),
+    content.width + pad * 2,
+    content.height + pad * 2,
+  );
+  pctx.restore();
+  return plane;
+}
+
+/** Cuts the layer plane by the source layer directly above it. */
+function applyTrackMatte(target: HTMLCanvasElement, matte: HTMLCanvasElement, mode: TrackMatte): void {
+  const ctx = target.getContext('2d');
+  if (!ctx) return;
+  if (mode === 'alpha' || mode === 'alpha-inverted') {
+    ctx.globalCompositeOperation = mode === 'alpha' ? 'destination-in' : 'destination-out';
+    ctx.drawImage(matte, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    return;
+  }
+  const source = matte.getContext('2d')?.getImageData(0, 0, matte.width, matte.height);
+  if (!source) return;
+  const alpha = document.createElement('canvas');
+  alpha.width = matte.width;
+  alpha.height = matte.height;
+  const alphaCtx = alpha.getContext('2d');
+  if (!alphaCtx) return;
+  const out = alphaCtx.createImageData(matte.width, matte.height);
+  const inverted = mode === 'luma-inverted';
+  for (let i = 0; i < source.data.length; i += 4) {
+    const luma = 0.2126 * source.data[i] + 0.7152 * source.data[i + 1] + 0.0722 * source.data[i + 2];
+    out.data[i] = 255;
+    out.data[i + 1] = 255;
+    out.data[i + 2] = 255;
+    out.data[i + 3] = ((inverted ? 255 - luma : luma) * source.data[i + 3]) / 255;
+  }
+  alphaCtx.putImageData(out, 0, 0);
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.drawImage(alpha, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 function drawLayer(
   ctx: CanvasRenderingContext2D,
   layer: Layer,
@@ -129,28 +202,19 @@ function drawLayer(
   scale: number,
   assets: Asset[],
   layersById: Map<string, Layer>,
+  matte: HTMLCanvasElement | null,
 ): void {
-  const matrix = worldMatrix(layer, layersById, frame);
   const opacity = clamp(worldOpacity(layer, layersById, frame) / 100, 0, 1);
   if (opacity <= 0) return;
-
-  const pad = effectPadding(layer, frame);
-  const content = renderLayerContent(layer, comp, assets, scale, pad);
-  let rendered = applyEffects(content.canvas, layer.effects, frame, scale);
-  rendered = applyMasks(rendered, layer, scale, content.width, content.height, pad);
+  const plane = renderLayerPlane(layer, comp, frame, scale, assets, layersById, false);
+  if (!plane) return;
+  if (matte && layer.trackMatte && layer.trackMatte !== 'none') applyTrackMatte(plane, matte, layer.trackMatte);
 
   ctx.save();
   ctx.globalAlpha = opacity;
   ctx.globalCompositeOperation = BLEND_MAP[layer.blend] ?? 'source-over';
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  ctx.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
-  ctx.drawImage(
-    rendered,
-    -(pad + content.width / 2),
-    -(pad + content.height / 2),
-    content.width + pad * 2,
-    content.height + pad * 2,
-  );
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(plane, 0, 0);
   ctx.restore();
 }
 
@@ -177,10 +241,13 @@ export function renderComp(target: HTMLCanvasElement, comp: Comp, frame: number,
 
   const layersById = new Map(comp.layers.map((l) => [l.id, l]));
   const soloActive = comp.layers.some((l) => l.solo && l.enabled);
+  const usedAsMatte = new Set<string>();
 
   for (let i = comp.layers.length - 1; i >= 0; i--) {
     const layer = comp.layers[i];
+    if (usedAsMatte.has(layer.id)) continue;
     if (!layer.enabled) continue;
+    if (layer.type === 'audio') continue;
     if (soloActive && !layer.solo) continue;
     if (frame < layer.inPoint || frame >= layer.outPoint) continue;
 
@@ -200,7 +267,25 @@ export function renderComp(target: HTMLCanvasElement, comp: Comp, frame: number,
       continue;
     }
 
-    drawLayer(ctx, layer, comp, frame, scale, opts.assets, layersById);
+    let matte: HTMLCanvasElement | null = null;
+    const matteLayer = i > 0 ? comp.layers[i - 1] : null;
+    if (
+      layer.trackMatte &&
+      layer.trackMatte !== 'none' &&
+      matteLayer &&
+      matteLayer.type !== 'audio' &&
+      matteLayer.type !== 'adjustment' &&
+      !usedAsMatte.has(matteLayer.id) &&
+      matteLayer.enabled &&
+      (!soloActive || matteLayer.solo) &&
+      frame >= matteLayer.inPoint &&
+      frame < matteLayer.outPoint
+    ) {
+      matte = renderLayerPlane(matteLayer, comp, frame, scale, opts.assets, layersById, true);
+      if (matte) usedAsMatte.add(matteLayer.id);
+    }
+
+    drawLayer(ctx, layer, comp, frame, scale, opts.assets, layersById, matte);
   }
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);

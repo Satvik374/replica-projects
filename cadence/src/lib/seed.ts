@@ -194,5 +194,7 @@ export function describeLayer(layer: Layer): string {
       return 'Null object';
     case 'adjustment':
       return 'Adjustment layer';
+    case 'audio':
+      return 'Audio layer';
   }
 }

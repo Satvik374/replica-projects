@@ -72,6 +72,8 @@ export const MENUS: MenuRoot[] = [
       item('Zoom In', 'comp.zoomIn', 'Ctrl+='),
       item('Zoom Out', 'comp.zoomOut', 'Ctrl+-'),
       item('Actual Size', 'comp.actual', 'Ctrl+1'),
+      sep,
+      item('Add Marker at Playhead', 'comp.marker', 'M'),
     ],
   },
   {
@@ -90,6 +92,9 @@ export const MENUS: MenuRoot[] = [
       sep,
       item('Set In Point to Playhead', 'layer.trimIn', '['),
       item('Set Out Point to Playhead', 'layer.trimOut', ']'),
+      item('Split Layer at Playhead', 'layer.split', 'Ctrl+Shift+D'),
+      sep,
+      item('Detect Audio Beats', 'layer.detectBeats', 'Ctrl+Alt+B'),
       sep,
       item('Toggle Visibility', 'layer.visible', 'Ctrl+Shift+H'),
       item('Toggle Lock', 'layer.lock', 'Ctrl+Alt+L'),

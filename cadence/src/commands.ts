@@ -21,7 +21,7 @@ function selectedLayers() {
 export function pickImages(): void {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/*';
+  input.accept = 'image/*,audio/*';
   input.multiple = true;
   input.onchange = () => {
     if (input.files && input.files.length > 0) void editor().importAssets(Array.from(input.files));
@@ -260,6 +260,22 @@ export function runCommand(id: string): void {
         state.setLayerTime(layerId, layer.inPoint, frame);
       });
       break;
+    case 'layer.split':
+      state.splitSelectedLayers();
+      break;
+    case 'layer.detectBeats':
+      withSelectedLayers((layerId) => {
+        const layer = activeComp().layers.find((l) => l.id === layerId);
+        if (!layer || layer.type !== 'audio') {
+          state.setStatus('Select an audio layer to detect beats.');
+          return;
+        }
+        void state.detectAudioBeats(layerId);
+      });
+      break;
+    case 'comp.marker':
+      state.addMarker();
+      break;
 
     case 'effect.removeAll':
       withSelectedLayers((layerId) => {
@@ -379,4 +395,7 @@ export const SHORTCUTS: ShortcutSpec[] = [
   { label: 'Pan viewer', keys: 'Space + drag' },
   { label: 'Zoom viewer', keys: 'Wheel' },
   { label: 'Add keyframes for transform', keys: 'Ctrl + Alt + K' },
+  { label: 'Split layer at playhead', keys: 'Ctrl + Shift + D' },
+  { label: 'Add composition marker', keys: 'M' },
+  { label: 'Detect beats in selected audio', keys: 'Ctrl + Alt + B' },
 ];

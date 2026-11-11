@@ -18,6 +18,8 @@
 | S12 help dialogs | done | shortcuts, about |
 | S13 character panel | done | full typography controls for text layers |
 | S14 info panel | done | live readouts |
+| S15 audio and beats | done | audio layer, waveform, synced playback, onset markers |
+| S16 track matte and split | done | alpha/luma matte from above; split at playhead |
 
 ## What was harder than it looked
 
@@ -35,24 +37,36 @@
   parented layer drifts when dragged. The orbit in the demo project exists to keep that honest.
 - **Dense but legible UI.** The layout is small: 11px text, 20–22px rows. It needed disciplined
   spacing tokens and a real furniture hierarchy, not just smaller fonts.
+- **Audio clock.** The canvas clock and HTMLAudioElement clock drift in different ways. The
+  transport owns one element per audio layer, corrects drift while playing, seeks exactly when
+  paused, and starts playback synchronously during the Play action so autoplay policies allow it.
+- **Beat detection without a dependency.** A short-time RMS envelope, local adaptive threshold,
+  minimum inter-onset gap and median interval are enough to find clean onsets and a tempo, but
+  the thresholds need tuning so a quiet intro is not silence and a sustained pad is not a beat.
+- **Track mattes.** Matte sources are above the layer, while the compositor draws bottom-up. The
+  layer had to be split into a composition-sized plane pass so the above layer could cut the
+  current plane, then be skipped instead of drawn twice.
 - **Desktop preview in a headless VM.** Electron cannot launch here, so the renderer is built to
   run identically in a browser and the Electron shell is wired but only statically verified.
 
 ## Where the feature matrix is partial, and why
 
+- Audio: playback, waveforms and beat markers only; no meters, fades, audio effects, time
+  stretch or muxed audio in the WebM export.
 - Video export: VP9 WebM only (MediaRecorder), no H.264/ProRes/sequences/queue.
 - Keyframe interpolation: presets plus custom in/out influence; no graph editor or draggable
   handles in the viewer.
 - Blend modes: 16 of the 38 in After Effects, limited by Canvas 2D composite operations.
 - Adjustment layers: effects apply, transform and opacity are ignored.
 - Masks: preset shapes with numeric editing; no pen tool or animated mask paths.
+- Track mattes: alpha/luma from the layer directly above; no matte layers in precompositions.
 - Keyboard coverage: tools, timing, keyframes, trims and file commands; not every After Effects
   shortcut (property single-key reveals, split layer, and so on).
 
 ## Verification run
 
 - `npx tsc --noEmit` — clean.
-- `npm run build` — production bundle (1617 modules, 297.9 kB JS / 31.9 kB CSS).
+- `npm run build` — production bundle (1619 modules, 311.6 kB JS / 33.0 kB CSS).
 - Browser preview — workspace renders the demo composition and all panels. The cloud browser
   panel is 392–648 px wide, below this desktop app's 1120×620 minimum, so the desktop captures
   render the app at 1280×800 and scale it 0.5 inside the panel at DPR 2; the saved images are
@@ -62,6 +76,14 @@
   55, selected a keyframe (the In/Out influence fields appeared), filtered and applied Glow,
   opened Render, and exported a PNG frame. The exported file is 1920×1080, 4.17 MB, and was
   visually inspected (`clone-screens/export-frame.png`).
+- Audio pass: generated a 4 s 120 BPM click-track WAV in the page, dropped it on the app, confirmed
+  the asset and waveform, added it as a layer, and ran Detect Beats. It produced 8 composition
+  markers and reported ~120 BPM; a play test invoked the audio element.
+- Beat detector unit pass: synthetic 8-click track at 120 BPM produced frames 0, 15, 30, 45, 60,
+  75, 90 and 105 at 30 fps.
+- Matte pass: synthetic two-layer comps verified alpha (centre 255, corner 0), luma (white 255,
+  black 0) and inverted luma (black 255). Split-at-playhead produced `Title` and `Title 2` at
+  frame 60 with a 9-layer timeline (`clone-screens/S16-split-layer.png`).
 - WebM export completed and downloaded a 10 KB file with a valid EBML/WebM header. It is a smoke
   test only: decoded frames were not inspected, and the small size reflects the mostly static
   demo composition under VP9.

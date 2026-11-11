@@ -36,6 +36,7 @@ export function makeComp(spec: CompSpec): Comp {
     duration: Math.max(1, Math.round(spec.duration)),
     bg: spec.bg,
     layers: [],
+    markers: [],
   };
 }
 
@@ -139,6 +140,13 @@ export function createImageLayer(comp: Comp, asset: Asset): Layer {
   return layer;
 }
 
+export function createAudioLayer(comp: Comp, asset: Asset): Layer {
+  const layer = makeLayer('audio', asset.name.replace(/\.[a-z0-9]+$/i, ''), comp, 'aqua');
+  layer.audio = { assetId: asset.id, volume: 100 };
+  layer.outPoint = Math.max(1, Math.min(comp.duration, Math.ceil((asset.duration ?? 0) * comp.fps)));
+  return layer;
+}
+
 export function makeEffectInstance(defId: string): EffectInstance | null {
   const def = EFFECTS_BY_ID[defId];
   if (!def) return null;
@@ -203,6 +211,8 @@ export function cloneComp(comp: Comp, name: string): Comp {
       shape: layer.shape ? { ...layer.shape } : undefined,
       text: layer.text ? { ...layer.text } : undefined,
       image: layer.image ? { ...layer.image } : undefined,
+      audio: layer.audio ? { ...layer.audio } : undefined,
+      trackMatte: layer.trackMatte ?? 'none',
     };
   });
   for (const layer of layers) {
@@ -236,6 +246,8 @@ export function cloneLayer(layer: Layer): Layer {
     shape: layer.shape ? { ...layer.shape } : undefined,
     text: layer.text ? { ...layer.text } : undefined,
     image: layer.image ? { ...layer.image } : undefined,
+    audio: layer.audio ? { ...layer.audio } : undefined,
+    trackMatte: layer.trackMatte ?? 'none',
   };
 }
 

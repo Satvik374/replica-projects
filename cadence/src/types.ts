@@ -67,7 +67,17 @@ export const BLEND_MODES: { id: BlendMode; label: string }[] = [
   { id: 'luminosity', label: 'Luminosity' },
 ];
 
-export type LayerType = 'solid' | 'text' | 'shape' | 'image' | 'null' | 'adjustment';
+export type LayerType = 'solid' | 'text' | 'shape' | 'image' | 'null' | 'adjustment' | 'audio';
+
+export type TrackMatte = 'none' | 'alpha' | 'alpha-inverted' | 'luma' | 'luma-inverted';
+
+export const TRACK_MATTE_OPTIONS: { id: TrackMatte; label: string }[] = [
+  { id: 'none', label: 'No matte' },
+  { id: 'alpha', label: 'Alpha matte' },
+  { id: 'alpha-inverted', label: 'Alpha inverted' },
+  { id: 'luma', label: 'Luma matte' },
+  { id: 'luma-inverted', label: 'Luma inverted' },
+];
 
 export type LabelColor =
   | 'red'
@@ -136,6 +146,12 @@ export interface ImageSpec {
   assetId: string;
 }
 
+export interface AudioSpec {
+  assetId: string;
+  /** 0–200, 100 is unity. */
+  volume: number;
+}
+
 export type MaskShape = 'rect' | 'ellipse';
 export type MaskMode = 'add' | 'subtract';
 
@@ -179,6 +195,16 @@ export interface Layer {
   shape?: ShapeSpec;
   solid?: SolidSpec;
   image?: ImageSpec;
+  audio?: AudioSpec;
+  /** Matte source is the layer directly above this one. */
+  trackMatte?: TrackMatte;
+}
+
+export interface Marker {
+  id: string;
+  t: number;
+  label: string;
+  color?: string;
 }
 
 export interface Comp {
@@ -190,15 +216,21 @@ export interface Comp {
   duration: number;
   bg: string;
   layers: Layer[];
+  markers?: Marker[];
 }
 
 export interface Asset {
   id: string;
   name: string;
-  kind: 'image';
+  kind: 'image' | 'audio';
   dataUrl: string;
   width: number;
   height: number;
+  /** Audio length in seconds. */
+  duration?: number;
+  /** Normalised 0–1 waveform peaks, sampled for the timeline. */
+  peaks?: number[];
+  sampleRate?: number;
 }
 
 export interface Project {

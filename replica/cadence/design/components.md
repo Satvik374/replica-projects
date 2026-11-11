@@ -74,13 +74,15 @@ influence  footer fields appear when exactly one key is selected: In % and Out %
 ## Timeline row
 
 ```
-layer row  22px, sticky 258px head, label chip, type icon, name, eye/solo/lock switches
+layer row  22px, sticky 258px head, label chip, type icon, name, eye/solo/lock switches;
+           audio rows add a max-peak waveform inside the bar; matte layers show an M badge
 bar        absolute from inPoint to outPoint, label colour at 22% mix, border at 45%;
            selected bar gets accent border; trim handles 6px on each edge
 property   20px, 36px indent, stopwatch + name + live value, keys on the track
 effect     effect header row, params indented 46px
 playhead   1px accent line with 11×9 triangle head, spans ruler and rows
-ruler      26px sticky, tick every 1/2/5s by zoom, mono second labels
+ruler      26px sticky, tick every 1/2/5s by zoom, mono second labels; composition markers
+           are 9px triangles (click seeks, double-click removes)
 states     layer selected, solo, hidden, locked, trimmed, key selected, filtered, empty
 ```
 
@@ -96,6 +98,23 @@ gizmo      8 screen-px handles: 4 corners scale uniformly from centre, rotate ha
            top-centre; dragging a layer moves every selected layer
 transport  30px: start/prev/play/next/end/loop, mono timecode, resolution, zoom controls
 states     empty comp, playing, fit, zoomed, panned, transparent, safe, grid
+```
+
+## Audio controls
+
+```
+location   inspector, above Transform when an audio layer is selected
+rows       Level (0–200%), Source name, duration in the section head
+primary    Detect beats button — analysing state, disabled when media is offline
+result     composition markers at onsets; status reports count and estimated BPM
+```
+
+## Track matte row
+
+```
+location   inspector Layer section, hidden for the top layer and audio layers
+control    select: no matte, alpha, alpha inverted, luma, luma inverted
+behaviour  the layer directly above becomes the matte and stops drawing itself
 ```
 
 ## Effect card

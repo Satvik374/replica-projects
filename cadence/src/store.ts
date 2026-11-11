@@ -19,6 +19,7 @@ import {
   cloneComp,
   cloneLayer,
   createAdjustmentLayer,
+  createAudioLayer,
   createImageLayer,
   createNullLayer,
   createShapeLayer,
@@ -40,6 +41,7 @@ import {
   saveProjectFile,
 } from './lib/project';
 import { readFileAsDataURL, loadImageSize } from './lib/files';
+import { analyzeAudioData, detectBeatsFromSamples, loadAudioBuffer } from './lib/audio';
 
 export type ViewFlag = 'transparency' | 'safe' | 'masks' | 'grid';
 export type ViewerZoom = 'fit' | number;
@@ -93,6 +95,11 @@ export interface EditorState {
   addNullLayer: () => void;
   addAdjustmentLayer: () => void;
   addImageLayer: (assetId: string) => void;
+  addAudioLayer: (assetId: string) => void;
+  splitSelectedLayers: () => void;
+  detectAudioBeats: (layerId: string) => Promise<void>;
+  addMarker: (at?: number, label?: string) => void;
+  removeMarker: (markerId: string) => void;
   deleteSelectedLayers: () => void;
   duplicateSelectedLayers: () => void;
   copySelectedLayers: () => void;
@@ -277,6 +284,119 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!asset) return;
       addCreatedLayer((comp) => createImageLayer(comp, asset));
     },
+    addAudioLayer: (assetId) => {
+      const asset = get().project.assets.find((a) => a.id === assetId);
+      if (!asset) return;
+      addCreatedLayer((comp) => createAudioLayer(comp, asset));
+    },
+
+    splitSelectedLayers: () => {
+      const state = get();
+      const comp = activeCompOf(state);
+      const frame = clamp(Math.round(state.time), 0, comp.duration);
+      const selected = new Set(state.selection);
+      if (selected.size === 0) {
+        set({ status: 'Select a layer to split.' });
+        return;
+      }
+      const next: Layer[] = [];
+      const ids: string[] = [];
+      for (const layer of comp.layers) {
+        if (!selected.has(layer.id) || frame <= layer.inPoint + 0.001 || frame >= layer.outPoint - 0.001) {
+          next.push(layer);
+          continue;
+        }
+        const left: Layer = { ...layer, outPoint: frame };
+        const right = cloneLayer(layer);
+        right.inPoint = frame;
+        right.outPoint = layer.outPoint;
+        right.name = nextLayerName(comp, `${layer.name} 2`);
+        next.push(left, right);
+        ids.push(right.id);
+      }
+      if (ids.length === 0) {
+        set({ status: 'Park the playhead inside the selected layer to split it.' });
+        return;
+      }
+      writeComp((current) => ({ ...current, layers: next }), {
+        selection: ids,
+        selectedKeys: [],
+        status: `Split ${ids.length} layer${ids.length === 1 ? '' : 's'} at frame ${frame}.`,
+      });
+    },
+
+    detectAudioBeats: async (layerId) => {
+      const state = get();
+      const comp = activeCompOf(state);
+      const layer = comp.layers.find((item) => item.id === layerId);
+      const asset = layer?.audio ? state.project.assets.find((item) => item.id === layer.audio?.assetId) : null;
+      if (!layer || !asset) {
+        set({ status: 'Select an audio layer that still has its source file.' });
+        return;
+      }
+      set({ status: `Analyzing ${asset.name}…` });
+      try {
+        const buffer = await loadAudioBuffer(asset);
+        const mixed = new Float32Array(buffer.length);
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+          const data = buffer.getChannelData(channel);
+          for (let i = 0; i < data.length; i++) mixed[i] += data[i] / buffer.numberOfChannels;
+        }
+        const result = detectBeatsFromSamples(mixed, buffer.sampleRate, comp.fps);
+        const frames = [...new Set(result.frames.map((frame) => Math.round(layer.inPoint + frame)))]
+          .filter((frame) => frame >= layer.inPoint && frame <= Math.min(layer.outPoint, comp.duration))
+          .slice(0, 400);
+        if (frames.length === 0) {
+          set({ status: `No clear beats found in ${asset.name}.` });
+          return;
+        }
+        writeComp(
+          (current) => {
+            const existing = current.markers ?? [];
+            const fresh = frames.filter((frame) => !existing.some((marker) => Math.abs(marker.t - frame) < 0.5));
+            if (fresh.length === 0) return current;
+            return {
+              ...current,
+              markers: [
+                ...existing,
+                ...fresh.map((frame, index) => ({
+                  id: uid('marker'),
+                  t: frame,
+                  label: `Beat ${existing.length + index + 1}`,
+                  color: '#a284e0',
+                })),
+              ],
+            };
+          },
+          {
+            status: `Added ${frames.length} beat markers${result.bpm ? ` at about ${result.bpm} BPM` : ''}.`,
+          },
+        );
+      } catch (error) {
+        set({ status: error instanceof Error ? `Beat detection failed: ${error.message}` : 'Beat detection failed.' });
+      }
+    },
+
+    addMarker: (at, label) => {
+      const state = get();
+      const comp = activeCompOf(state);
+      const t = clamp(Math.round(at ?? state.time), 0, comp.duration);
+      writeComp((current) => {
+        const markers = current.markers ?? [];
+        return {
+          ...current,
+          markers: [
+            ...markers,
+            { id: uid('marker'), t, label: label?.trim() || `Marker ${markers.length + 1}`, color: '#e8a33d' },
+          ],
+        };
+      }, { status: `Added marker at frame ${t}.` });
+    },
+    removeMarker: (markerId) =>
+      writeComp((current) => ({
+        ...current,
+        markers: (current.markers ?? []).filter((marker) => marker.id !== markerId),
+      }), { status: 'Removed marker.' }),
 
     deleteSelectedLayers: () => {
       const { selection } = get();
@@ -652,36 +772,58 @@ export const useEditor = create<EditorState>((set, get) => {
 
     importAssets: async (files) => {
       const imported: Asset[] = [];
+      const comp = activeCompOf(get());
+      set({ status: 'Importing media…' });
       for (const file of files) {
-        if (!file.type.startsWith('image/')) continue;
+        const isImage = file.type.startsWith('image/');
+        const isAudio = file.type.startsWith('audio/') || /\.(wav|mp3|m4a|aac|ogg|flac|aif|aiff)$/i.test(file.name);
+        if (!isImage && !isAudio) continue;
         try {
           const dataUrl = await readFileAsDataURL(file);
-          const size = await loadImageSize(dataUrl);
-          imported.push({
-            id: uid('asset'),
-            name: file.name,
-            kind: 'image',
-            dataUrl,
-            width: size.w,
-            height: size.h,
-          });
+          if (isImage) {
+            const size = await loadImageSize(dataUrl);
+            imported.push({
+              id: uid('asset'),
+              name: file.name,
+              kind: 'image',
+              dataUrl,
+              width: size.w,
+              height: size.h,
+            });
+          } else {
+            const analysis = await analyzeAudioData(dataUrl, comp.fps);
+            imported.push({
+              id: uid('asset'),
+              name: file.name,
+              kind: 'audio',
+              dataUrl,
+              width: 0,
+              height: 0,
+              duration: analysis.duration,
+              peaks: analysis.peaks,
+              sampleRate: analysis.sampleRate,
+            });
+          }
         } catch {
           // Skip files that cannot be decoded.
         }
       }
       if (imported.length === 0) {
-        set({ status: 'No usable image files were found.' });
+        set({ status: 'No usable image or audio files were found.' });
         return;
       }
       writeProject((project) => ({ ...project, assets: [...project.assets, ...imported] }));
+      const audioCount = imported.filter((asset) => asset.kind === 'audio').length;
       set({
-        status: `Imported ${imported.length} item${imported.length === 1 ? '' : 's'}.`,
+        status: `Imported ${imported.length} item${imported.length === 1 ? '' : 's'}${audioCount ? ` · ${audioCount} audio` : ''}. Double-click to add to the timeline.`,
         renderVersion: get().renderVersion + 1,
       });
     },
     removeAsset: (assetId) => {
       const used = get().project.comps.some((comp) =>
-        comp.layers.some((layer) => layer.type === 'image' && layer.image?.assetId === assetId),
+        comp.layers.some(
+          (layer) => layer.image?.assetId === assetId || layer.audio?.assetId === assetId,
+        ),
       );
       if (used) {
         set({ status: 'This item is used by a layer. Remove those layers first.' });

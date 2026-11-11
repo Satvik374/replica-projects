@@ -30,12 +30,14 @@ src/lib/property.ts      path → property lookup (transform.x, effects/<id>/<pa
 src/lib/factory.ts       layer/comp/effect/mask constructors, deep clones with fresh ids
 src/lib/seed.ts          the opening demo project, written for Cadence
 src/lib/project.ts       validation, JSON, autosave, desktop save/open
+src/lib/audio.ts         Web Audio decode, waveform peaks, onset/BPM detection, buffer cache
 src/engine/content.ts    text layout and measurement, shape paths, image cache, layer sources
 src/engine/effects.ts    19 effect implementations (canvas filters + pixel passes)
-src/engine/render.ts     per-layer pipeline, masks, adjustment layers, blend modes
+src/engine/render.ts     per-layer plane pipeline, masks, track mattes, adjustment layers, blend modes
 src/engine/hitTest.ts    inverse geometry for viewer selection
 src/engine/exporter.ts   PNG still and real-time WebM recording
 src/components/*         panels, fields, dialogs, context menu, menu bar, viewer, timeline
+src/components/AudioPlayback.tsx  one HTMLAudioElement per audio layer, synced to the clock
 ```
 
 ## State and history
@@ -58,15 +60,23 @@ deleting layers.
 
 ```
 for each layer, bottom → top:
-  if hidden / outside in-out / filtered by solo: skip
+  if hidden / outside in-out / filtered by solo / audio: skip
   if adjustment layer:
       copy current composite → run effect stack → replace composite
   else:
       source canvas = layer content + effect padding
       effects = stack of enabled effects, evaluated at the current frame
       masks = alpha union of add masks minus subtract masks
-      draw with worldMatrix, opacity (including parents) and blend mode
+      plane = composition-sized canvas with worldMatrix applied
+      if trackMatte: render the layer directly above to its own plane,
+                     cut this plane by alpha or luma, skip that source when reached
+      composite the plane with opacity (including parents) and blend mode
 ```
+
+Audio layers never touch the canvas. A separate transport creates one `HTMLAudioElement` per
+layer, computes the target time from `(compositionTime - inPoint) / fps`, corrects drift while
+playing, seeks exactly while paused, and starts within the Play action so autoplay policy is
+satisfied. Waveform peaks are decoded once at import and stored with the asset.
 
 Layer content is measured in layer-local pixels: solids and images have a fixed size, text is
 measured with the current font, shapes come from the shape spec. Effects that spread (blur, glow,
@@ -86,9 +96,11 @@ slow frames never change the duration of the piece.
 
 DOM rows, not canvas: readable text, real buttons and accessible switches. The panel is one
 scroll container with sticky headers, a `--track-w` pixel width derived from duration × zoom,
-absolutely positioned keyframe diamonds, and a single playhead line spanning the rows. Dragging
-uses window pointer listeners rather than pointer capture, so a drag continues correctly outside
-the panel, and each drag is wrapped in a store transaction for undo.
+absolutely positioned keyframe diamonds, waveform paths, composition marker triangles, and a
+single playhead line spanning the rows. Dragging uses window pointer listeners rather than
+pointer capture, so a drag continues correctly outside the panel, and each drag is wrapped in a
+store transaction for undo. Splitting a layer clones it and trims the two halves at the playhead,
+keeping effects, masks, keys and audio payloads.
 
 ## Desktop integration
 
@@ -103,16 +115,21 @@ back to downloads and file inputs.
 Projects are `JSON.stringify(project, null, 2)` with a format tag and version. Loading normalises
 missing properties, clamps dimensions, repairs parent references and removes invalid active-comp
 IDs. Autosave writes to `localStorage` 700 ms after the last change; explicit save uses native
-dialogs in Electron. Imported images are inlined as data URLs, so a project is portable but can
-grow with large footage — acceptable for short motion pieces.
+dialogs in Electron. Imported images and audio are inlined as data URLs, so a project is portable
+but can grow with large footage — acceptable for short motion pieces. Audio assets also store
+duration, sample rate and waveform peaks; audio layers store volume and a track-matte field.
+Composition markers are serialised with the comp.
 
 ## Verification
 
-- `npm run build` — strict TypeScript plus production bundle.
-- Browser preview at 1440×900 and narrow widths; composition renders, text and shape layers,
-  keyframes, effects, masks and adjustment layers checked visually.
-- Timeline interactions: keyframe drag, layer trim, playhead scrub, ease application.
-- Export: PNG still and WebM video (best-effort browser support).
+- `npm run build` — strict TypeScript plus production bundle (1619 modules).
+- Browser preview; composition, text/shape layers, keyframes, effects, masks and adjustment
+  layers checked visually. Captures are in `clone-screens/`; the cloud panel is narrower than
+  the app minimum, so desktop shots use a scaled app canvas.
+- Timeline interactions: keyframe drag, layer trim, playhead scrub, ease application, split.
+- Audio: synthetic WAV import, waveform, 8 beat markers at 120 BPM, transport play call.
+- Matte unit checks: alpha, luma and inverted-luma cases on synthetic comps.
+- Export: PNG still inspected; WebM recorded and downloaded but decoded frames not inspected.
 - Desktop: Electron shell, native menu and dialogs are wired but cannot be launched in this
   headless workspace; `npm run dev:desktop` and `npm run desktop` are the documented checks on a
   machine with a display.

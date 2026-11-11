@@ -8,6 +8,7 @@ import { Timeline } from './components/Timeline';
 import { Inspector } from './components/Inspector';
 import { CharacterPanel, InfoPanel } from './components/SidePanels';
 import { StatusBar } from './components/StatusBar';
+import { AudioPlayback } from './components/AudioPlayback';
 import { Dialogs } from './components/Dialogs';
 import { ContextMenu } from './components/ContextMenu';
 import { useEditor } from './store';
@@ -183,9 +184,11 @@ export function App() {
       onDrop={(event) => {
         event.preventDefault();
         setDragging(false);
-        const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/'));
+        const files = Array.from(event.dataTransfer.files).filter(
+          (file) => file.type.startsWith('image/') || file.type.startsWith('audio/'),
+        );
         if (files.length > 0) void importAssets(files);
-        else useEditor.getState().setStatus('Drop PNG, JPEG, WebP or GIF images to import them.');
+        else useEditor.getState().setStatus('Drop images or WAV/MP3/M4A/OGG audio to import it.');
       }}
     >
       <MenuBar />
@@ -201,10 +204,11 @@ export function App() {
           <CharacterPanel />
         </div>
       </main>
+      <AudioPlayback />
       <StatusBar />
       <Dialogs />
       <ContextMenu />
-      {dragging ? <div className="drop-hint">Drop images to import into the project</div> : null}
+      {dragging ? <div className="drop-hint">Drop images or audio to import into the project</div> : null}
     </div>
   );
 }

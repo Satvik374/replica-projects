@@ -13,7 +13,7 @@ original. It is not affiliated with or endorsed by Adobe; After Effects is their
 ```bash
 cd cadence
 npm install            # React, Vite, Electron
-npm run dev            # browser preview at http://localhost:3000
+npm run dev            # browser preview at http://localhost:5173
 npm run dev:desktop    # Vite + Electron together, with hot reload
 npm run build          # typecheck + production bundle
 npm run desktop        # build, then launch the packaged renderer in Electron
@@ -34,11 +34,13 @@ Screenshots of the workspace, keyframe editing, render dialog and a real exporte
 - Compositions with size, frame rate, duration and background, editable at any time.
 - Project panel with live-rendered composition thumbnails, image footage, search and a context menu.
 - Readable versioned JSON projects (`.cadence.json`) plus debounced autosave.
-- Import images by picker or drag and drop anywhere in the window.
+- Import images and audio by picker or drag and drop anywhere in the window.
+- Audio files decode duration and a waveform envelope on import; double-click the asset to add an audio layer.
 
 **Layers**
-- Solids, text, shapes (rectangle, ellipse, star, polygon), images, null objects and adjustment layers.
+- Solids, text, shapes (rectangle, ellipse, star, polygon), images, audio, null objects and adjustment layers.
 - Parenting with correct world transforms, label colours, visibility, solo, lock, blend modes.
+- Track mattes from the layer directly above: alpha, inverted alpha, luma and inverted luma.
 - In/out points, layer stacking, duplicate and clipboard copy/paste.
 
 **Animation**
@@ -49,8 +51,16 @@ Screenshots of the workspace, keyframe editing, render dialog and a real exporte
   multi-select, delete, right-click interpolation, previous/next keyframe navigation.
 - Frame-accurate playback clock, loop, scrubbing, timeline zoom and fit.
 
+**Audio and timing**
+- Synced audio playback with per-layer level, solo and visibility handling.
+- Waveform peaks drawn directly on the audio layer bar.
+- Beat detection: short-time energy onsets with an adaptive threshold, a minimum inter-onset gap,
+  a median-interval BPM estimate, then composition markers at each beat.
+- Composition markers: add at the playhead (M), click to seek, double-click to remove.
+- Split selected layers at the playhead (Ctrl+Shift+D) while preserving effects, masks and keys.
+
 **Compositing and effects**
-- Canvas 2D compositor: per-layer offscreen render, effect chain, masks, then transform and blend.
+- Canvas 2D compositor: per-layer offscreen render, effect chain, masks, transform and blend.
 - 19 effects: Gaussian Blur, Directional Blur, Unsharp Mask, Glow, Drop Shadow, Brightness &
   Contrast, Exposure, Hue & Saturation, Levels, Tint, Fill, Gradient Ramp, Invert, Posterize,
   Threshold, Grain, Vignette, Mosaic, Wave Warp, Turbulent Displace.
@@ -74,6 +84,9 @@ Screenshots of the workspace, keyframe editing, render dialog and a real exporte
 | ↑ / ↓ | Select the previous / next layer |
 | F9 | Easy ease selected keyframes |
 | [ / ] | Set the layer in / out point at the playhead |
+| Ctrl+Shift+D | Split selected layers at the playhead |
+| M | Add a composition marker |
+| Ctrl+Alt+B | Detect beats in the selected audio layer |
 | U | Show only animated properties in the timeline |
 | V / H / Z | Selection / hand / zoom tool |
 | T / R / E | Text / rectangle / ellipse tool |
@@ -94,9 +107,13 @@ The full list is in Help ▸ Keyboard Shortcuts.
 2. The layer's effect stack runs over that canvas, ping-ponging through canvas operations
    (filters, composite modes) and typed-array pixel passes for tonal effects.
 3. Masks clip the alpha channel of the same canvas.
-4. The result is drawn into the composition with the layer's world matrix (anchor → scale →
-   rotation → position, composed through parents), opacity and blend mode.
-5. Adjustment layers copy the composite so far, run their effect stack over it, and replace it.
+4. Each layer is rendered into a composition-sized transparent plane with its world matrix
+   (anchor → scale → rotation → position, composed through parents). If it has a track matte,
+   the layer directly above is rendered to a plane and used as an alpha or luma cut-out; that
+   matte layer is not drawn on its own.
+5. The plane is composited with opacity and blend mode.
+6. Adjustment layers copy the composite so far, run their effect stack over it, and replace it.
+7. Audio layers are sampled by a separate HTMLAudioElement transport, not by the canvas.
 
 The viewer renders at display resolution times the preview setting, and exports render at full
 size. Playback advances composition time from a `requestAnimationFrame` clock, so changing the
@@ -130,13 +147,17 @@ frame rate changes how many frames are shown, not how long the composition lasts
 }
 ```
 
-Keyframe times are composition frames. Imported images are inlined as data URLs so a project
-file is self-contained.
+Keyframe times are composition frames. Imported images and audio are inlined as data URLs so a
+project file is self-contained; audio assets also store duration and waveform peaks.
 
 ## Limits worth knowing
 
+- Audio playback is synchronized to the composition clock but has no meters, fades, audio
+  effects, time stretch or export muxing; video export is picture only.
 - Video export is VP9 WebM via MediaRecorder, rendered in real time. There is no H.264, ProRes,
-  image sequence, audio pipeline, render queue or output-module template system.
+  image sequence, render queue or output-module template system.
+- Track mattes use the layer directly above and support alpha/luma; there are no matte layers
+  inside precompositions, and masks cannot be used as matte sources.
 - No 3D layers, cameras, lights, track mattes, expressions, text animators, graph editor,
   puppet tools, Lottie interchange or After Effects project import.
 - Adjustment layers apply effects to the composite below, but their own transform and opacity
