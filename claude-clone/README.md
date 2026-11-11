@@ -132,6 +132,35 @@ it. `npm audit` applies to Wrangler (dev only), not to shipped runtime code.
 `../replica/claude/architecture.md`; the Worker creates the same schema
 idempotently on first request.
 
+## Vercel
+
+`api/index.js` runs the same `worker.js` on a Vercel Function, giving the Worker's
+D1 surface a Postgres or SQLite shim. `vercel.json` serves `public/` statically,
+rewrites `/api/*` to the function and the app routes to the shell.
+
+```bash
+npm run dev:vercel      # local harness on :3100, no Vercel login needed
+npm run test:vercel     # 45-check API suite through the Vercel handler
+```
+
+Persistence is decided by `POSTGRES_URL` (or `DATABASE_URL`):
+
+- **Set** — `pg` pool, schema created idempotently, data survives instances and
+  cold starts. Create Vercel Postgres (Storage → Postgres) or connect Neon and add
+  the connection string as an environment variable.
+- **Unset** — `node:sqlite` at `/tmp/alcove-vercel.db`. Everything works in a warm
+  instance, but the file is ephemeral and not shared between instances. Smoke test
+  only, never for real accounts.
+
+`engines.node` is pinned to 24.x because the SQLite fallback uses `node:sqlite`.
+The adapter builds `https` URLs from `x-forwarded-proto`; without that, the
+Worker's same-origin check would reject every mutation behind Vercel's proxy. SQL
+translation (placeholders, `INTEGER`→`BIGINT`, `LIKE`→`ILIKE`) is the only
+Postgres-specific logic, and it is exercised by the suite above.
+
+To deploy: `vercel login`, then `vercel deploy` from this directory. Anonymous
+`vercel deploy --temporary` also works, but expires and has no persistent database.
+
 ## Fidelity and deliberate deviations
 
 Measured against the signed-in reference during recon: 264px sidebar, a composer
