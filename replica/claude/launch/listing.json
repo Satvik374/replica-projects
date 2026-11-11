@@ -1,0 +1,16 @@
+{
+  "avoid": ["Claude", "Anthropic"],
+  "app_store": {
+    "name": "Alcove: Thinking Space",
+    "subtitle": "Chats, projects, artifacts",
+    "promotional_text": "Usage you can read: messages used, messages left, and the exact reset time.",
+    "description": "Alcove is a calm workspace for thinking with an assistant, and it shows the budget before you spend it.\n\nOne message counts once. The sidebar shows how many are left and when the window resets, so the wall never arrives without warning.\n\nWhat is inside:\n- Chats that stream, stop, retry, and keep every thread you have had\n- Projects with their own instructions and knowledge, kept apart from each other\n- Artifacts with a live preview, versions, copy and download\n- Response styles, extended thinking, and a model picker\n- Search across chats, projects and messages\n- Incognito threads that are never saved\n- Share links that are snapshots, revocable at any time\n- One-click export, one-click delete\n\nHonest note: this build has no language model behind it. Replies come from a scripted engine so the interface, the states and the counting can be judged as they are.\n\nFlat pricing. Cancel in one click, in Settings.",
+    "keywords": "assistant,workspace,notes,projects,artifacts,prompts,thinking,chats,research,writing",
+    "whats_new": "Usage you can read, artifact versions, and incognito threads."
+  },
+  "google_play": {
+    "title": "Alcove: Thinking Space",
+    "short_description": "A calm assistant workspace that shows your message budget before you spend it.",
+    "full_description": "Alcove is a calm workspace for thinking with an assistant, and it shows the budget before you spend it.\n\nOne message counts once. The sidebar shows how many are left and when the window resets.\n\nInside: streaming chats, projects with their own knowledge, artifacts with versions and a live preview, response styles, extended thinking, search, incognito threads, revocable share links, one-click export and one-click delete.\n\nHonest note: no language model is wired in this build; replies come from a scripted engine so the interface and the counting can be judged as they are.\n\nFlat pricing. Cancel in one click."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Alcove",
+  "avoid": ["Claude", "Anthropic", "Claude.ai", "ClaudeAI"],
+  "domains": ["claude.ai", "anthropic.com", "support.claude.com"],
+  "colors": ["#D97757", "#CC785C", "#F0EEE6", "#191919"],
+  "note": "Alcove's palette is pine green on chalk; the original's clay and cream are listed here so the sweep catches leftovers."
+}

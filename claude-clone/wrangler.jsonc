@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "alcove",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-07",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  // Local development only. The Sites deployment injects the real DB binding;
+  // this block gives `wrangler dev` a local SQLite database to talk to.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "alcove",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
+}

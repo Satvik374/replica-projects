@@ -1,0 +1,8 @@
+{
+  "siteId": "8c1d4a62-3f5b-4e79-9a2c-7d6b1e0f4a53",
+  "name": "Alcove",
+  "preview": "https://site-d6c5afdc6b2e48d09ef1bdb7842eedf9.freebuff.page",
+  "production": "https://site-dd6eaf2ae77740a5b5529db4b61a2623.freebuff.page",
+  "bindings": { "DB": "d1" },
+  "note": "Preview deploy only. Production has not been published."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "alcove",
+  "private": true,
+  "type": "module",
+  "description": "Alcove — a clean-room rebuild of the signed-in claude.ai workspace, with accounts, projects, artifacts and sharing.",
+  "scripts": {
+    "dev": "wrangler dev --port 3001 --ip 0.0.0.0",
+    "check": "node --check worker.js && node --check public/js/api.js && node --check public/js/ui.js && node --check public/js/markdown.js && node --check public/js/engine.js && node --check public/js/app.js",
+    "test": "python3 scripts/api-test.py",
+    "test:deployed": "python3 scripts/api-test.py https://site-d6c5afdc6b2e48d09ef1bdb7842eedf9.freebuff.page"
+  },
+  "devDependencies": {
+    "wrangler": "^4.44.0"
+  }
+}

@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-size="md">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Alcove</title>
+<meta name="description" content="Alcove is a calm workspace for thinking with an assistant: chats, projects, knowledge, artifacts and sharing." />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2317614f'/%3E%3Cpath d='M9 23V13a7 7 0 0 1 14 0v10h-4v-9.5a3 3 0 0 0-6 0V23z' fill='%23f7f6f2'/%3E%3C/svg%3E" />
+<script>
+  // Resolve the theme before first paint so there is no flash.
+  (function () {
+    try {
+      var raw = localStorage.getItem("alcove.prefs");
+      var prefs = raw ? JSON.parse(raw) : {};
+      var dark = prefs.theme === "dark" ||
+        (prefs.theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      if (prefs.fontSize === "sm" || prefs.fontSize === "lg") document.documentElement.dataset.size = prefs.fontSize;
+      if (prefs.motion === "reduce") document.documentElement.dataset.motion = "reduce";
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<a class="skip-link" href="#view">Skip to the conversation</a>
+
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v5M14 11v5"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16zM14 6l4 4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5H6a1 1 0 0 0-1 1v9"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 5v6h-6"/></symbol>
+  <symbol id="i-thumb-up" viewBox="0 0 24 24"><path d="M7 10v10H4V10zM7 10l4-7 1.5 1a2 2 0 0 1 .8 2.3L12 10h6a2 2 0 0 1 2 2.4l-1.4 6A2 2 0 0 1 16.6 20H7"/></symbol>
+  <symbol id="i-thumb-down" viewBox="0 0 24 24"><path d="M17 14V4h3v10zM17 14l-4 7-1.5-1a2 2 0 0 1-.8-2.3L12 14H6a2 2 0 0 1-2-2.4l1.4-6A2 2 0 0 1 7.4 4H17"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M5 20V11a7 7 0 0 1 14 0v9l-2.3-2-2.4 2-2.3-2-2.3 2L7.3 18z"/><path d="M9.5 10h.01M14.5 10h.01"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></symbol>
+  <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m20 11-7.6 7.6a4.2 4.2 0 0 1-6-6L14 5a3 3 0 0 1 4.2 4.2l-7.4 7.4a1.8 1.8 0 0 1-2.6-2.6l6.9-6.9"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V15a3 3 0 0 0 4 2.8V20M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1 5.8V15a3 3 0 0 1-4 2.8V20M9 4v12M15 4v12"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
+  <symbol id="i-log-out" viewBox="0 0 24 24"><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h5"/><path d="M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2 21h20z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M4 17h15"/></symbol>
+  <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar" aria-label="Workspace">
+    <div class="sidebar__top">
+      <a class="brand" href="/" id="brandHome" aria-label="Alcove home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22"><path d="M5 28V14a11 11 0 0 1 22 0v14h-5V14.5a6 6 0 0 0-12 0V28z" fill="currentColor"/></svg>
+        </span>
+        <span class="brand__word">Alcove</span>
+      </a>
+      <button class="icon-btn sidebar__collapse" id="collapseSidebar" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+        <svg class="icon"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+
+    <div class="sidebar__actions">
+      <button class="btn btn--primary sidebar__new" id="newChat" type="button">
+        <svg class="icon"><use href="#i-plus"/></svg><span>New chat</span>
+      </button>
+      <button class="icon-btn" id="incognitoToggle" type="button" aria-pressed="false" title="Incognito chat" aria-label="Start an incognito chat">
+        <svg class="icon"><use href="#i-ghost"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="Workspace sections">
+      <button class="nav-row" id="openSearch" type="button">
+        <svg class="icon"><use href="#i-search"/></svg><span>Search</span><kbd>⌘K</kbd>
+      </button>
+      <a class="nav-row" id="openProjects" href="/projects">
+        <svg class="icon"><use href="#i-folder"/></svg><span>Projects</span>
+      </a>
+      <button class="nav-row" id="openSettings" type="button">
+        <svg class="icon"><use href="#i-settings"/></svg><span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar__scroll" id="history">
+      <div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+      <noscript><p class="sidebar__note">Turn on JavaScript to see your chats.</p></noscript>
+    </div>
+
+    <div class="sidebar__foot">
+      <button class="usage-pill" id="sideUsage" type="button" aria-describedby="sideUsageText">
+        <span class="usage-pill__bar"><span class="usage-pill__fill" id="sideUsageFill"></span></span>
+        <span class="usage-pill__text" id="sideUsageText">Loading usage…</span>
+      </button>
+      <button class="user-pill" id="userPill" type="button" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar avatar--sm" id="userAvatar" aria-hidden="true">A</span>
+        <span class="user-pill__text">
+          <span class="user-pill__name" id="userName">Signed out</span>
+          <span class="user-pill__plan" id="userPlan">Free plan</span>
+        </span>
+        <svg class="icon"><use href="#i-chevron-down"/></svg>
+      </button>
+      <div class="menu menu--up" id="userMenu" role="menu" hidden>
+        <div class="menu__head" id="menuHead">Not signed in</div>
+        <button class="menu__item" type="button" role="menuitem" data-open="settings" data-tab="account"><svg class="icon"><use href="#i-user"/></svg>Account</button>
+        <button class="menu__item" type="button" role="menuitem" data-open="settings" data-tab="customize"><svg class="icon"><use href="#i-spark"/></svg>Customize</button>
+        <button class="menu__item" type="button" role="menuitem" data-open="settings" data-tab="usage"><svg class="icon"><use href="#i-book"/></svg>Usage</button>
+        <button class="menu__item" type="button" role="menuitem" id="menuSignOut" hidden><svg class="icon"><use href="#i-log-out"/></svg>Sign out</button>
+        <button class="menu__item" type="button" role="menuitem" data-open="auth" data-mode="signin" id="menuSignIn"><svg class="icon"><use href="#i-lock"/></svg>Sign in</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="main" id="main" tabindex="-1">
+    <header class="topbar" id="topbar">
+      <button class="icon-btn topbar__menu" id="mobileMenu" type="button" aria-label="Open navigation">
+        <svg class="icon"><use href="#i-menu"/></svg>
+      </button>
+      <div class="topbar__title-wrap">
+        <button class="topbar__title" id="chatTitle" type="button" title="Rename this chat">New chat</button>
+        <span class="chip chip--project" id="topbarProject" hidden></span>
+        <span class="chip chip--incognito" id="topbarIncognito" hidden><svg class="icon"><use href="#i-ghost"/></svg>Incognito</span>
+      </div>
+      <div class="topbar__actions">
+        <button class="btn btn--ghost btn--sm" id="shareBtn" type="button" hidden>
+          <svg class="icon"><use href="#i-share"/></svg><span>Share</span>
+        </button>
+        <button class="icon-btn" id="chatMenuBtn" type="button" aria-label="Chat options" aria-haspopup="menu" aria-expanded="false" hidden>
+          <svg class="icon"><use href="#i-more"/></svg>
+        </button>
+        <div class="menu menu--right" id="chatMenu" role="menu" hidden>
+          <button class="menu__item" type="button" role="menuitem" id="renameChat"><svg class="icon"><use href="#i-pencil"/></svg>Rename</button>
+          <button class="menu__item" type="button" role="menuitem" id="starChat"><svg class="icon"><use href="#i-star"/></svg>Star</button>
+          <button class="menu__item" type="button" role="menuitem" id="moveChat"><svg class="icon"><use href="#i-folder"/></svg>Move to project…</button>
+          <button class="menu__item menu__item--danger" type="button" role="menuitem" id="deleteChat"><svg class="icon"><use href="#i-trash"/></svg>Delete</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="view" id="view" tabindex="-1"></div>
+
+    <div class="composer-dock" id="composerDock">
+      <form class="composer" id="composer" autocomplete="off">
+        <div class="composer__files" id="attachmentChips" hidden></div>
+        <label class="visually-hidden" for="prompt">Message Alcove</label>
+        <textarea id="prompt" class="composer__input" rows="1" placeholder="How can I help you today?" maxlength="60000"></textarea>
+        <div class="composer__row">
+          <div class="composer__left">
+            <button class="icon-btn" id="attachBtn" type="button" aria-label="Add a file or context" aria-haspopup="menu" aria-expanded="false">
+              <svg class="icon"><use href="#i-plus"/></svg>
+            </button>
+            <div class="menu menu--up menu--left" id="plusMenu" role="menu" hidden>
+              <button class="menu__item" type="button" role="menuitem" id="attachFile"><svg class="icon"><use href="#i-paperclip"/></svg>Attach a file</button>
+              <button class="menu__item" type="button" role="menuitem" id="useProjectContext"><svg class="icon"><use href="#i-folder"/></svg>Project knowledge</button>
+            </div>
+            <button class="chip-btn" id="modelBtn" type="button" aria-haspopup="menu" aria-expanded="false">
+              <span id="modelLabel">Sonnet 5.5</span><svg class="icon"><use href="#i-chevron-down"/></svg>
+            </button>
+            <div class="menu menu--up menu--left menu--wide" id="modelMenu" role="menu" hidden></div>
+            <button class="chip-btn" id="styleBtn" type="button" aria-haspopup="menu" aria-expanded="false">
+              <svg class="icon"><use href="#i-spark"/></svg><span id="styleLabel">Normal</span>
+            </button>
+            <div class="menu menu--up menu--left menu--wide" id="styleMenu" role="menu" hidden></div>
+          </div>
+          <div class="composer__right">
+            <button class="icon-btn" id="thinkingBtn" type="button" aria-pressed="false" aria-label="Extended thinking" title="Extended thinking">
+              <svg class="icon"><use href="#i-brain"/></svg>
+            </button>
+            <button class="icon-btn icon-btn--send" id="sendBtn" type="submit" aria-label="Send message">
+              <svg class="icon" id="sendIcon"><use href="#i-send"/></svg>
+            </button>
+          </div>
+        </div>
+        <input type="file" id="fileInput" multiple hidden accept=".txt,.md,.csv,.json,.html,.css,.js,.ts,.py,.sql,.yaml,.yml,.xml,.svg,image/*" />
+      </form>
+      <p class="composer__hint" id="composerNote">Alcove replies are generated on your device from a scripted engine. Your chats are stored in your account.</p>
+    </div>
+  </main>
+
+  <aside class="artifact-panel" id="artifactPanel" aria-label="Artifact" hidden>
+    <div class="artifact-panel__head">
+      <div class="artifact-panel__title">
+        <svg class="icon"><use href="#i-code"/></svg>
+        <span id="artifactTitle">Artifact</span>
+      </div>
+      <div class="artifact-panel__actions">
+        <label class="visually-hidden" for="artifactVersions">Version</label>
+        <select class="select select--sm" id="artifactVersions"></select>
+        <button class="icon-btn" id="artifactCopy" type="button" aria-label="Copy artifact code"><svg class="icon"><use href="#i-copy"/></svg></button>
+        <button class="icon-btn" id="artifactDownload" type="button" aria-label="Download artifact"><svg class="icon"><use href="#i-download"/></svg></button>
+        <button class="icon-btn" id="artifactClose" type="button" aria-label="Close artifact"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="artifact-panel__tabs" role="tablist" aria-label="Artifact view">
+      <button class="tab is-active" id="artifactPreviewTab" role="tab" aria-selected="true" type="button" data-artifact-tab="preview">Preview</button>
+      <button class="tab" id="artifactCodeTab" role="tab" aria-selected="false" type="button" data-artifact-tab="code">Code</button>
+    </div>
+    <div class="artifact-panel__body">
+      <iframe class="artifact-panel__frame" id="artifactFrame" title="Artifact preview" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>
+      <pre class="artifact-panel__code" id="artifactCode" hidden><code id="artifactCodeBody"></code></pre>
+    </div>
+  </aside>
+</div>
+
+<!-- ------------------------------------------------------------- dialogs -->
+
+<dialog class="dialog" id="authDialog" aria-labelledby="authTitle">
+  <div class="dialog__body">
+    <button class="icon-btn dialog__close" type="button" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    <div class="dialog__mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28"><path d="M5 28V14a11 11 0 0 1 22 0v14h-5V14.5a6 6 0 0 0-12 0V28z" fill="currentColor"/></svg></div>
+    <h2 id="authTitle">Welcome back</h2>
+    <p class="dialog__sub" id="authSub">Sign in to keep your chats, projects and settings.</p>
+    <form id="authForm" novalidate>
+      <div class="field" id="nameField" hidden>
+        <label for="authName">Display name</label>
+        <input id="authName" name="name" type="text" autocomplete="name" maxlength="40" placeholder="Ada Lovelace" />
+      </div>
+      <div class="field">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" name="email" type="email" autocomplete="email" required maxlength="254" aria-describedby="emailError" placeholder="you@example.com" />
+        <p class="field__error" id="emailError" hidden></p>
+      </div>
+      <div class="field">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" required minlength="8" aria-describedby="passwordError passwordHint" placeholder="At least 8 characters" />
+        <p class="field__hint" id="passwordHint" hidden>Eight characters or more. Nothing else is required.</p>
+        <p class="field__error" id="passwordError" hidden></p>
+      </div>
+      <p class="form-error" id="authError" role="alert" hidden></p>
+      <button class="btn btn--primary btn--full" id="authSubmit" type="submit">Sign in</button>
+    </form>
+    <p class="dialog__switch"><span id="authSwitchText">New here?</span> <button class="link" id="authToggle" type="button">Create an account</button></p>
+    <p class="dialog__fine">This is a clean-room study. Accounts are local to this deployment and hold only what you type here.</p>
+  </div>
+</dialog>
+
+<dialog class="dialog dialog--wide" id="settingsDialog" aria-labelledby="settingsTitle">
+  <div class="settings">
+    <button class="icon-btn dialog__close" type="button" data-close aria-label="Close settings"><svg class="icon"><use href="#i-x"/></svg></button>
+    <nav class="settings__rail" aria-label="Settings sections">
+      <h2 id="settingsTitle" class="settings__heading">Settings</h2>
+      <button class="settings__tab is-active" type="button" data-tab="general">General</button>
+      <button class="settings__tab" type="button" data-tab="account">Account</button>
+      <button class="settings__tab" type="button" data-tab="usage">Usage</button>
+      <button class="settings__tab" type="button" data-tab="customize">Customize</button>
+      <button class="settings__tab" type="button" data-tab="privacy">Privacy</button>
+      <button class="settings__tab" type="button" data-tab="shortcuts">Shortcuts</button>
+      <button class="settings__tab" type="button" data-tab="about">About</button>
+    </nav>
+    <div class="settings__panes">
+      <section class="settings__pane" data-pane="general">
+        <h3>General</h3>
+        <p class="settings__lede">How Alcove looks on this device and on your account.</p>
+        <fieldset class="setting">
+          <legend>Theme</legend>
+          <div class="segmented" role="radiogroup" aria-label="Theme">
+            <label><input type="radio" name="theme" value="system" /><span>System</span></label>
+            <label><input type="radio" name="theme" value="light" /><span>Light</span></label>
+            <label><input type="radio" name="theme" value="dark" /><span>Dark</span></label>
+          </div>
+        </fieldset>
+        <fieldset class="setting">
+          <legend>Text size</legend>
+          <div class="segmented">
+            <label><input type="radio" name="fontSize" value="sm" /><span>Small</span></label>
+            <label><input type="radio" name="fontSize" value="md" /><span>Default</span></label>
+            <label><input type="radio" name="fontSize" value="lg" /><span>Large</span></label>
+          </div>
+        </fieldset>
+        <div class="setting setting--row">
+          <div><span class="setting__name">Reduce motion</span><span class="setting__desc">Collapse transitions and streaming animation.</span></div>
+          <button class="switch" id="setMotion" type="button" role="switch" aria-checked="false" aria-label="Reduce motion"><span></span></button>
+        </div>
+        <div class="setting setting--row">
+          <div><span class="setting__name">Suggestions on the home screen</span><span class="setting__desc">Show the starter cards when a chat is empty.</span></div>
+          <button class="switch" id="setSuggestions" type="button" role="switch" aria-checked="true" aria-label="Show suggestions"><span></span></button>
+        </div>
+        <p class="setting__status" id="prefsStatus" role="status"></p>
+      </section>
+
+      <section class="settings__pane" data-pane="account" hidden>
+        <h3>Account</h3>
+        <div id="acctOut" class="empty-inline">
+          <p>You are signed out. Chats live on this device only until you sign in.</p>
+          <button class="btn btn--primary" type="button" data-open="auth" data-mode="signin">Sign in</button>
+        </div>
+        <div id="acctIn" hidden>
+          <div class="kv"><span>Email</span><strong id="acctEmail">—</strong></div>
+          <div class="kv"><span>Member since</span><strong id="acctSince">—</strong></div>
+          <div class="kv"><span>Plan</span><strong id="acctPlan">Free</strong></div>
+          <div class="field">
+            <label for="setName">Display name</label>
+            <input id="setName" type="text" maxlength="40" />
+            <p class="field__error" id="nameError" hidden></p>
+          </div>
+          <button class="btn btn--secondary" type="button" id="saveName">Save name</button>
+          <hr class="rule" />
+          <form id="passwordForm" novalidate>
+            <h4>Change password</h4>
+            <div class="field"><label for="currentPassword">Current password</label><input id="currentPassword" type="password" autocomplete="current-password" /></div>
+            <div class="field"><label for="nextPassword">New password</label><input id="nextPassword" type="password" autocomplete="new-password" /><p class="field__hint">At least 8 characters. Other devices are signed out.</p></div>
+            <p class="field__error" id="passwordChangeError" hidden></p>
+            <button class="btn btn--secondary" type="submit" id="changePassword">Change password</button>
+          </form>
+          <p class="setting__status" id="accountStatus" role="status"></p>
+          <hr class="rule" />
+          <div class="confirm__row">
+            <button class="btn btn--danger" type="button" id="settingsSignOut">Sign out</button>
+            <button class="btn btn--secondary" type="button" id="signOutAll">Sign out everywhere</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings__pane" data-pane="usage" hidden>
+        <h3>Usage</h3>
+        <p class="settings__lede">Alcove counts one message against this window when you send it. It does not meter tokens, and it does not change the limit quietly.</p>
+        <div class="usage-card">
+          <div class="usage-card__top"><span>Messages this window</span><strong id="usageCount">0 of 60</strong></div>
+          <div class="meter"><span id="usageMeterFill"></span></div>
+          <p class="usage-card__reset" id="usageReset">—</p>
+          <div class="usage-card__plans">
+            <div><span>Plan</span><strong id="usagePlan">Free</strong></div>
+            <button class="btn btn--secondary btn--sm" type="button" id="upgradeBtn">Compare plans</button>
+          </div>
+        </div>
+        <div class="usage-grid">
+          <div class="usage-tile"><strong id="usageChats">0</strong><span>Saved chats</span></div>
+          <div class="usage-tile"><strong id="usageProjects">0</strong><span>Projects</span></div>
+          <div class="usage-tile"><strong>5 h</strong><span>Window length</span></div>
+        </div>
+        <p class="settings__note">A message limit is a product decision, not a model fact. This build publishes its own rule so you can plan around it.</p>
+        <p class="setting__status" id="upgradeStatus" role="status"></p>
+      </section>
+
+      <section class="settings__pane" data-pane="customize" hidden>
+        <h3>Customize</h3>
+        <p class="settings__lede">Styles change how a reply reads, not what it says. Instructions apply to every chat on this account.</p>
+        <h4>Response styles</h4>
+        <div class="style-list" id="styleList"></div>
+        <button class="btn btn--secondary btn--sm" type="button" id="newStyle"><svg class="icon"><use href="#i-plus"/></svg>Create a style</button>
+        <hr class="rule" />
+        <h4>Instructions for Alcove</h4>
+        <div class="field">
+          <label for="accountInstructions">Standing instructions</label>
+          <textarea id="accountInstructions" rows="4" maxlength="4000" placeholder="Keep answers under 200 words. Use British spelling. Ask before assuming."></textarea>
+          <p class="field__hint">Project instructions win over these when you are in a project.</p>
+        </div>
+        <button class="btn btn--secondary" type="button" id="saveInstructions">Save instructions</button>
+        <p class="setting__status" id="instructionsStatus" role="status"></p>
+      </section>
+
+      <section class="settings__pane" data-pane="privacy" hidden>
+        <h3>Privacy</h3>
+        <p class="settings__lede">Your data is yours. Export it, unshare it, or delete all of it.</p>
+        <h4>Shared chats</h4>
+        <div class="share-list" id="sharedList"></div>
+        <hr class="rule" />
+        <h4>Export</h4>
+        <p class="settings__note">A JSON file with your account, settings, chats, messages, projects, knowledge and styles.</p>
+        <button class="btn btn--secondary" type="button" id="exportData"><svg class="icon"><use href="#i-download"/></svg>Export my data</button>
+        <p class="setting__status" id="dataStatus" role="status"></p>
+        <hr class="rule" />
+        <h4>Delete account</h4>
+        <p class="settings__note">Deletes the account, every chat, every project, every knowledge file and every session. There is no undo.</p>
+        <button class="btn btn--danger" type="button" id="deleteAccount">Delete my account</button>
+        <div class="confirm" id="deleteConfirm" hidden>
+          <p>Delete everything, permanently?</p>
+          <div class="confirm__row">
+            <button class="btn btn--danger" type="button" id="deleteConfirmYes">Delete everything</button>
+            <button class="btn btn--ghost" type="button" id="deleteConfirmNo">Keep my account</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings__pane" data-pane="shortcuts" hidden>
+        <h3>Keyboard</h3>
+        <p class="settings__lede">Everything below works without a mouse.</p>
+        <table class="shortcuts">
+          <tbody>
+            <tr><td>Send a message</td><td><kbd>Enter</kbd></td></tr>
+            <tr><td>New line</td><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td></tr>
+            <tr><td>New chat</td><td><kbd>⌘</kbd> / <kbd>Ctrl</kbd> + <kbd>K</kbd> then <kbd>N</kbd></td></tr>
+            <tr><td>Search everything</td><td><kbd>⌘</kbd> / <kbd>Ctrl</kbd> + <kbd>K</kbd></td></tr>
+            <tr><td>Focus the composer</td><td><kbd>⌘</kbd> / <kbd>Ctrl</kbd> + <kbd>J</kbd></td></tr>
+            <tr><td>Stop a reply</td><td><kbd>Esc</kbd></td></tr>
+            <tr><td>Close a dialog</td><td><kbd>Esc</kbd></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="settings__pane" data-pane="about" hidden>
+        <h3>About Alcove</h3>
+        <p class="settings__lede">A clean-room rebuild of the signed-in assistant workspace, written from public documentation and screenshots. It rebuilds the features and the flow, not the original's code, brand, copy or content.</p>
+        <div class="kv"><span>Version</span><strong>1.0</strong></div>
+        <div class="kv"><span>Replies</span><strong>Scripted engine, streamed</strong></div>
+        <div class="kv"><span>Storage</span><strong>Cloudflare D1, per account</strong></div>
+        <div class="kv"><span>Original's model</span><strong>Not included</strong></div>
+        <p class="settings__note">No analytics, no third-party requests, no advertising. The only cookies are the session cookie.</p>
+      </section>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="shareDialog" aria-labelledby="shareTitle">
+  <div class="dialog__body">
+    <button class="icon-btn dialog__close" type="button" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    <h2 id="shareTitle">Share this chat</h2>
+    <p class="dialog__sub">A public link shows a snapshot of this conversation as it is right now. Messages you send later stay private unless you share again. Attachments never travel.</p>
+    <div class="setting setting--row">
+      <div><span class="setting__name">Public link</span><span class="setting__desc" id="shareState">Off — only you can open this chat.</span></div>
+      <button class="switch" id="shareSwitch" type="button" role="switch" aria-checked="false" aria-label="Public link"><span></span></button>
+    </div>
+    <div class="share-link" id="shareLinkRow" hidden>
+      <label class="visually-hidden" for="shareLink">Public link</label>
+      <input id="shareLink" type="text" readonly />
+      <button class="btn btn--primary btn--sm" type="button" id="copyShare">Copy</button>
+    </div>
+    <p class="setting__status" id="shareStatus" role="status"></p>
+    <p class="dialog__fine">Anyone with the link can read it. Search engines are asked not to index it. Turning it off breaks the link for everyone.</p>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="projectDialog" aria-labelledby="projectDialogTitle">
+  <div class="dialog__body">
+    <button class="icon-btn dialog__close" type="button" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    <h2 id="projectDialogTitle">New project</h2>
+    <p class="dialog__sub">A project keeps its own instructions, knowledge and chats. Chats in a project do not see other projects.</p>
+    <form id="projectForm" novalidate>
+      <div class="field">
+        <label for="projectName">Name</label>
+        <input id="projectName" type="text" maxlength="80" required placeholder="Field notes" />
+        <p class="field__error" id="projectNameError" hidden></p>
+      </div>
+      <div class="field">
+        <label for="projectDesc">What is it for?</label>
+        <input id="projectDesc" type="text" maxlength="400" placeholder="Long-running research and half-finished drafts." />
+      </div>
+      <p class="form-error" id="projectError" role="alert" hidden></p>
+      <button class="btn btn--primary btn--full" type="submit" id="projectSubmit">Create project</button>
+    </form>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="styleDialog" aria-labelledby="styleDialogTitle">
+  <div class="dialog__body">
+    <button class="icon-btn dialog__close" type="button" data-close aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    <h2 id="styleDialogTitle">Create a style</h2>
+    <p class="dialog__sub">Describe how replies should read. Alcove follows these instructions in every chat that uses the style.</p>
+    <form id="styleForm" novalidate>
+      <div class="field"><label for="styleName">Name</label><input id="styleName" type="text" maxlength="40" required placeholder="Plain-language brief" /><p class="field__error" id="styleNameError" hidden></p></div>
+      <div class="field"><label for="styleDesc">One-line description</label><input id="styleDesc" type="text" maxlength="120" placeholder="Short sentences, no jargon, always gives the next step." /></div>
+      <div class="field"><label for="styleInstructions">Instructions</label><textarea id="styleInstructions" rows="5" maxlength="2000" required placeholder="Write in short sentences. Lead with the answer. Avoid adjectives. End with one concrete next step."></textarea><p class="field__error" id="styleError" hidden></p></div>
+      <p class="form-error" id="styleFormError" role="alert" hidden></p>
+      <button class="btn btn--primary btn--full" type="submit" id="styleSubmit">Create style</button>
+    </form>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="confirmDialog" aria-labelledby="confirmTitle">
+  <div class="dialog__body dialog__body--tight">
+    <h2 id="confirmTitle">Are you sure?</h2>
+    <p class="dialog__sub" id="confirmBody">This cannot be undone.</p>
+    <div class="confirm__row">
+      <button class="btn btn--danger" type="button" id="confirmYes">Confirm</button>
+      <button class="btn btn--ghost" type="button" id="confirmNo">Cancel</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="dialog dialog--palette" id="palette" aria-labelledby="paletteTitle">
+  <h2 class="visually-hidden" id="paletteTitle">Search</h2>
+  <div class="palette__search">
+    <svg class="icon"><use href="#i-search"/></svg>
+    <label class="visually-hidden" for="paletteInput">Search chats, projects and actions</label>
+    <input id="paletteInput" type="text" placeholder="Search chats, projects and actions…" autocomplete="off" />
+    <button class="icon-btn" type="button" data-close aria-label="Close search"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="palette__results" id="paletteResults" role="listbox" aria-label="Results"></div>
+  <div class="palette__foot"><kbd>↑</kbd><kbd>↓</kbd> to move <kbd>↵</kbd> to open <kbd>esc</kbd> to close</div>
+</dialog>
+
+<div class="toast" id="status" role="status" aria-live="polite"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

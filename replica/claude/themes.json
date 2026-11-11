@@ -1,0 +1,42 @@
+{
+  "about": "Themes for assistant workspaces: limits, opaque counting, project context, artifacts, price, long conversations.",
+  "themes": [
+    {
+      "id": "limits",
+      "label": "Message and usage limits",
+      "kind": "complaint",
+      "patterns": ["limits?", "usage", "blocked", "timeout", "capped", "5-hour", "hit my message", "hit my usage"]
+    },
+    {
+      "id": "opaque",
+      "label": "Limits that are hard to predict",
+      "kind": "complaint",
+      "patterns": ["does not realize", "explain to me how", "how message limits work", "not sure", "no idea", "suddenly"]
+    },
+    {
+      "id": "project-context",
+      "label": "Project context and retrieval",
+      "kind": "complaint",
+      "patterns": ["project", "documents", "retrieval", "rag", "context", "knowledge"]
+    },
+    {
+      "id": "artifacts",
+      "label": "Artifacts that break",
+      "kind": "complaint",
+      "patterns": ["artifact", "artifacts", "buggy", "swift extension"]
+    },
+    {
+      "id": "price",
+      "label": "Price and plan value",
+      "kind": "complaint",
+      "patterns": ["paying", "pay more", "price", "subscription", "pro plan", "max plan", "credits", "20x"]
+    },
+    {
+      "id": "long-context",
+      "label": "Long conversations burn the budget",
+      "kind": "complaint",
+      "patterns": ["400 page", "novel", "compress", "1m-context", "token", "long session"]
+    }
+  ],
+  "request_patterns": ["wish", "please add", "would be nice", "need a way", "should be able", "feature request", "hope they", "i want"]
+}
