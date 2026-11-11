@@ -3,3 +3,6 @@
 replica/screens/
 replica/chatgpt/screens/
 replica/boltnew/screens/
+cadence/node_modules/
+cadence/dist/
+cadence/release/
