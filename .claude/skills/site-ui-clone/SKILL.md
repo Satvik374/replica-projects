@@ -47,10 +47,7 @@ write every line of the clone from that.
    content, not code: put it in one `content` module so the user can swap it in
    a single edit before publishing. Do not lift their brand name into
    identifiers, package names, page titles or metadata.
-6. **Public pages only.** No login walls, paywalls, robots.txt violations or
-   rate-limit hammering. One capture pass, human speed. If a page needs auth,
-   stop and say so.
-7. **Say which is which.** In the spec, mark every value as `measured`
+6. **Say which is which.** In the spec, mark every value as `measured`
    (from the capture) or `inferred` (your judgement). Never present a guess as
    a measurement.
 
@@ -275,7 +272,6 @@ three closest details, the three furthest, and the next fix.
 
 ## When the target is hostile to measurement
 
-- **Consent walls / login** → stop, ask, do not bypass.
 - **Canvas or WebGL page** (the DOM has almost no boxes) → say so early. Rebuild
   the layout and typography, recreate the visual with your own canvas work, and
   set expectations: this is a recreation, not a copy.
